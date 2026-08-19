@@ -8,7 +8,7 @@
 
 ## Milestone 2: Working interface
 
-- [ ] Create a form for resume text and job description text
+- [x] Create a PDF resume-upload form and job-description text input
 - [ ] Add input validation and loading/error states
 - [ ] Display a placeholder analysis
 

@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas import AnalysisRequest, AnalysisResponse
+from app.schemas import AnalysisResponse
+from app.services.pdf_extractor import extract_resume_from_pdf
 
 app = FastAPI(
     title="CareerLens AI API",
@@ -28,21 +31,34 @@ def health_check() -> dict[str, str]:
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
-def analyze_career_fit(request: AnalysisRequest) -> AnalysisResponse:
-    """Validate user input and return a temporary non-AI analysis response.
+async def analyze_career_fit(
+    resume: Annotated[UploadFile, File(description="A resume PDF, 5 MB maximum")],
+    job_description: Annotated[str, Form(min_length=30, max_length=20_000)],
+) -> AnalysisResponse:
+    """Extract a resume PDF and return a temporary non-AI analysis response.
 
     This is deliberately a demo response. In the next milestone, this function
     will call the AI service through a dedicated analyzer module.
     """
 
-    resume_words = len(request.resume.split())
-    job_words = len(request.job_description.split())
+    if not resume.filename or not resume.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please upload a PDF resume.",
+        )
+
+    resume_bytes = await resume.read()
+    extracted_resume = extract_resume_from_pdf(resume_bytes)
+    resume_words = len(extracted_resume.text.split())
+    job_words = len(job_description.split())
 
     return AnalysisResponse(
         is_demo=True,
-        summary="Your resume and job description were received securely by the backend.",
+        summary="Your PDF resume was read securely by the backend.",
         message=(
-            f"The resume contains about {resume_words} words and the job description "
+            f"{resume.filename} contains about {resume_words} words and the job description "
             f"contains about {job_words} words. AI-powered analysis will be added next."
         ),
+        resume_filename=resume.filename,
+        extracted_links=extracted_resume.links,
     )

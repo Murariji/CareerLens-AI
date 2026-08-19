@@ -20,6 +20,7 @@ This document explains where each kind of work belongs. It is the map you can us
 | `backend/app/main.py` | Starts FastAPI and exposes API endpoints. |
 | `backend/app/schemas.py` | Defines the shape of incoming data and AI results. |
 | `backend/app/services/analyzer.py` | Builds the AI request and converts its answer into a useful analysis. |
+| `backend/app/services/pdf_extractor.py` | Validates a PDF in memory and extracts its text and visible HTTP(S) links. |
 | `backend/app/core/config.py` | Reads safe configuration, such as an API key, from a local `.env` file. |
 | `backend/requirements.txt` | Lists the Python packages needed to run the backend. |
 
@@ -35,13 +36,14 @@ This document explains where each kind of work belongs. It is the map you can us
 
 ## One request, step by step
 
-1. The user pastes their resume and a job description into the frontend form.
-2. The frontend sends both texts to the backend's `/api/analyze` endpoint.
-3. The backend validates that neither text is empty or excessively long.
-4. The analyzer sends clear instructions and the validated texts to the AI model.
-5. For now, the backend returns a temporary structured response; later, the analyzer will call a model.
-6. The backend validates the structure and sends it to the frontend.
-7. The frontend renders the analysis for the user.
+1. The user uploads their resume as a PDF and pastes a job description into the frontend form.
+2. The frontend sends the PDF and text as form data to the backend's `/api/analyze` endpoint.
+3. The backend validates file type, file size, extracted text, and job-description length.
+4. The PDF extractor reads the PDF in memory and returns its text and visible links without opening those links.
+5. The analyzer will send clear instructions and the validated texts to the AI model.
+6. For now, the backend returns a temporary structured response; later, the analyzer will call a model.
+7. The backend validates the structure and sends it to the frontend.
+8. The frontend renders the analysis for the user.
 
 ## Interview explanation
 

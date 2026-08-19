@@ -4,7 +4,7 @@ CareerLens AI is a GenAI-powered career assistant for students and early-career 
 
 ## Version 1 goal
 
-A user pastes resume text and a job description into a web page. The application returns a structured analysis containing a match summary, strengths, skill gaps, truthful improvement suggestions, and interview questions.
+A user uploads a resume PDF and pastes a job description into a web page. The application extracts the resume text in memory and returns a structured analysis containing a match summary, strengths, skill gaps, truthful improvement suggestions, and interview questions.
 
 ## How it works
 
