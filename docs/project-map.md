@@ -21,6 +21,7 @@ This document explains where each kind of work belongs. It is the map you can us
 | `backend/app/schemas.py` | Defines the shape of incoming data and AI results. |
 | `backend/app/services/analyzer.py` | Builds the AI request and converts its answer into a useful analysis. |
 | `backend/app/core/config.py` | Reads safe configuration, such as an API key, from a local `.env` file. |
+| `backend/requirements.txt` | Lists the Python packages needed to run the backend. |
 
 ## Frontend files we will add
 
