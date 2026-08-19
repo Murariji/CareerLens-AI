@@ -1,17 +1,14 @@
 import { FormEvent, useState } from 'react'
-
-type DraftAnalysis = {
-  matchScore: number
-  message: string
-}
+import { AnalysisResult, analyzeCareerFit } from './api/client'
 
 function App() {
   const [resume, setResume] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [error, setError] = useState('')
-  const [analysis, setAnalysis] = useState<DraftAnalysis | null>(null)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setAnalysis(null)
@@ -21,11 +18,16 @@ function App() {
       return
     }
 
-    // Temporary local result. In the next milestone this will call our FastAPI backend.
-    setAnalysis({
-      matchScore: 0,
-      message: 'Your inputs are ready. The next milestone connects this form to the AI analysis API.',
-    })
+    setIsAnalyzing(true)
+
+    try {
+      const result = await analyzeCareerFit(resume, jobDescription)
+      setAnalysis(result)
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Something went wrong.')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   return (
@@ -63,13 +65,15 @@ function App() {
 
         {error && <p className="error" role="alert">{error}</p>}
 
-        <button type="submit">Analyze my fit</button>
+        <button type="submit" disabled={isAnalyzing}>
+          {isAnalyzing ? 'Analyzing...' : 'Analyze my fit'}
+        </button>
       </form>
 
       {analysis && (
         <section className="result-card" aria-live="polite">
-          <p className="result-label">Interface check complete</p>
-          <h2>Ready for AI analysis</h2>
+          <p className="result-label">{analysis.is_demo ? 'Backend connection successful' : 'Career analysis'}</p>
+          <h2>{analysis.summary}</h2>
           <p>{analysis.message}</p>
         </section>
       )}

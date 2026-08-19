@@ -39,6 +39,8 @@ button { background: #276749; border: 0; border-radius: 10px; color: white; curs
 
 button:hover { background: #1f5239; }
 
+button:disabled { cursor: wait; opacity: 0.65; }
+
 .error { color: #b42318; grid-column: 1 / -1; margin: 0; }
 
 .result-card { background: white; border: 1px solid #d9e2ec; border-radius: 16px; margin-top: 32px; max-width: 700px; padding: 24px; }

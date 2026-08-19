@@ -39,7 +39,7 @@ This document explains where each kind of work belongs. It is the map you can us
 2. The frontend sends both texts to the backend's `/api/analyze` endpoint.
 3. The backend validates that neither text is empty or excessively long.
 4. The analyzer sends clear instructions and the validated texts to the AI model.
-5. The model returns structured data rather than an unstructured paragraph.
+5. For now, the backend returns a temporary structured response; later, the analyzer will call a model.
 6. The backend validates the structure and sends it to the frontend.
 7. The frontend renders the analysis for the user.
 
