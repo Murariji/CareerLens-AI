@@ -30,6 +30,7 @@ This document explains where each kind of work belongs. It is the map you can us
 | `frontend/src/components/AnalysisForm.tsx` | Text areas and the Analyze button. |
 | `frontend/src/components/AnalysisResult.tsx` | Presents the AI analysis clearly. |
 | `frontend/src/api/client.ts` | Sends the frontend's request to the backend. |
+| `frontend/src/styles.css` | Defines the visual styling and responsive layout. |
 
 ## One request, step by step
 

@@ -12,6 +12,7 @@ venv/
 # Node.js
 node_modules/
 dist/
+.npm-cache/
 
 # User-uploaded documents and application data
 uploads/
