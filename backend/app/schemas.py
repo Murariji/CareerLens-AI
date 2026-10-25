@@ -9,3 +9,7 @@ class AnalysisResponse(BaseModel):
     message: str
     resume_filename: str
     extracted_links: list[str] = Field(default_factory=list)
+    match_score: int = Field(ge=0, le=100)
+    matching_skills: list[str] = Field(default_factory=list)
+    missing_skills: list[str] = Field(default_factory=list)
+    resume_suggestions: list[str] = Field(default_factory=list)

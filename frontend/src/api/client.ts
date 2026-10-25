@@ -4,6 +4,10 @@ export type AnalysisResult = {
   message: string
   resume_filename: string
   extracted_links: string[]
+  match_score: number
+  matching_skills: string[]
+  missing_skills: string[]
+  resume_suggestions: string[]
 }
 
 const API_BASE_URL = 'http://127.0.0.1:8000'

@@ -21,6 +21,8 @@ This document explains where each kind of work belongs. It is the map you can us
 | `backend/app/schemas.py` | Defines the shape of incoming data and AI results. |
 | `backend/app/services/analyzer.py` | Builds the AI request and converts its answer into a useful analysis. |
 | `backend/app/services/pdf_extractor.py` | Validates a PDF in memory and extracts its text and visible HTTP(S) links. |
+| `backend/app/services/skill_matcher.py` | Produces a transparent skill-overlap score, gaps, and truthful suggestions without using an LLM. |
+| `backend/tests/test_skill_matcher.py` | Tests matching behavior so skill detection changes do not silently regress. |
 | `backend/app/core/config.py` | Reads safe configuration, such as an API key, from a local `.env` file. |
 | `backend/requirements.txt` | Lists the Python packages needed to run the backend. |
 
@@ -48,3 +50,5 @@ This document explains where each kind of work belongs. It is the map you can us
 ## Interview explanation
 
 > CareerLens AI uses a React frontend for user interaction and a FastAPI backend to securely orchestrate the LLM call. The backend validates input and requires structured output. The prompt includes a grounding rule: every recommendation must be supported by the supplied resume or job description, and it must never fabricate experience.
+
+Before an LLM is added, CareerLens runs an explainable baseline matcher. This is deliberate: it creates a measurable baseline for evaluating whether the LLM improves the analysis rather than merely making it sound more confident.

@@ -22,11 +22,17 @@ The frontend collects and displays information. The backend keeps the AI key sec
 
 ## Planned capabilities
 
-- Compare resume content with job requirements
+- Compare resume content with job requirements using an explainable baseline
 - Identify matching skills and genuine skill gaps
 - Give suggestions grounded only in the supplied resume and job description
 - Generate targeted interview questions
 - Refuse to invent skills, achievements, or experience
+
+## How the current match score works
+
+CareerLens currently uses a transparent baseline before we introduce an LLM. It detects a curated set of skills in both the uploaded resume and the job description, then combines skill coverage with relevant-term coverage. The result is an **evidence match**, not a promise of interview success or an ATS score.
+
+This baseline is important: it is reproducible, testable, and gives us a benchmark for evaluating the future AI analysis.
 
 ## Technology
 

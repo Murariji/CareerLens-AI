@@ -14,8 +14,10 @@
 
 ## Milestone 3: GenAI analysis
 
-- [ ] Add the `/api/analyze` backend endpoint
-- [ ] Define structured request and response schemas
+- [x] Add the `/api/analyze` backend endpoint
+- [x] Define structured request and response schemas
+- [x] Add an explainable deterministic skill-match baseline
+- [ ] Validate the skill-match baseline with unit tests
 - [ ] Call the LLM through the backend only
 - [ ] Add grounding and anti-fabrication guardrails
 

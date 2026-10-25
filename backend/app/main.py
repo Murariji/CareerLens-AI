@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas import AnalysisResponse
 from app.services.pdf_extractor import extract_resume_from_pdf
+from app.services.skill_matcher import build_match_report
 
 app = FastAPI(
     title="CareerLens AI API",
@@ -51,14 +52,19 @@ async def analyze_career_fit(
     extracted_resume = extract_resume_from_pdf(resume_bytes)
     resume_words = len(extracted_resume.text.split())
     job_words = len(job_description.split())
+    report = build_match_report(extracted_resume.text, job_description)
 
     return AnalysisResponse(
         is_demo=True,
-        summary="Your PDF resume was read securely by the backend.",
+        summary=f"Your current evidence match is {report.match_score}%.",
         message=(
             f"{resume.filename} contains about {resume_words} words and the job description "
-            f"contains about {job_words} words. AI-powered analysis will be added next."
+            f"contains about {job_words} words. This is an explainable baseline, not an AI-generated claim."
         ),
         resume_filename=resume.filename,
         extracted_links=extracted_resume.links,
+        match_score=report.match_score,
+        matching_skills=report.matching_skills,
+        missing_skills=report.missing_skills,
+        resume_suggestions=report.suggestions,
     )
