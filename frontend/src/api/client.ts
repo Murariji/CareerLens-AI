@@ -8,6 +8,14 @@ export type AnalysisResult = {
   matching_skills: string[]
   missing_skills: string[]
   resume_suggestions: string[]
+  target_role: string
+  location: string | null
+  application_plan: {
+    readiness: 'ready_to_apply' | 'apply_after_updates' | 'build_evidence_first'
+    headline: string
+    reason: string
+    next_actions: string[]
+  }
 }
 
 const API_BASE_URL = 'http://127.0.0.1:8000'
@@ -15,10 +23,14 @@ const API_BASE_URL = 'http://127.0.0.1:8000'
 export async function analyzeCareerFit(
   resume: File,
   jobDescription: string,
+  targetRole: string,
+  location: string,
 ): Promise<AnalysisResult> {
   const formData = new FormData()
   formData.append('resume', resume)
   formData.append('job_description', jobDescription)
+  formData.append('target_role', targetRole)
+  formData.append('location', location)
 
   const response = await fetch(`${API_BASE_URL}/api/analyze`, {
     method: 'POST',

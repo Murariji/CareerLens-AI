@@ -52,6 +52,14 @@ class MatchReport:
     suggestions: list[str]
 
 
+@dataclass(frozen=True)
+class ApplicationPlan:
+    readiness: str
+    headline: str
+    reason: str
+    next_actions: list[str]
+
+
 def _find_skills(text: str) -> set[str]:
     lower_text = text.lower()
     return {
@@ -110,4 +118,44 @@ def build_match_report(resume_text: str, job_description: str) -> MatchReport:
         missing_skills=missing_skills,
         resume_skills=sorted(resume_skills),
         suggestions=_build_suggestions(missing_skills, resume_text),
+    )
+
+
+def build_application_plan(report: MatchReport, target_role: str) -> ApplicationPlan:
+    """Convert evidence into an honest, concrete next-step plan."""
+
+    role = target_role.strip() or "this role"
+    if report.match_score >= 70 and not report.missing_skills:
+        return ApplicationPlan(
+            readiness="ready_to_apply",
+            headline=f"You have evidence to apply for {role} now.",
+            reason="Your resume already demonstrates the catalogued skills named in this job description.",
+            next_actions=[
+                "Tailor your summary and top project bullet to mirror this role’s wording.",
+                "Open the application and submit only claims you can defend in an interview.",
+                "Prepare one concrete story for each matching skill before an interview.",
+            ],
+        )
+
+    if report.match_score >= 45:
+        gap = report.missing_skills[0] if report.missing_skills else "role-specific evidence"
+        return ApplicationPlan(
+            readiness="apply_after_updates",
+            headline=f"Apply after a focused update for {role}.",
+            reason=f"Your profile has relevant evidence, but {gap} needs a clearer proof point or a learning plan.",
+            next_actions=[
+                *report.suggestions[:2],
+                "Save this opportunity and apply once the resume update is truthful and complete.",
+            ],
+        )
+
+    gap = report.missing_skills[0] if report.missing_skills else "relevant project evidence"
+    return ApplicationPlan(
+        readiness="build_evidence_first",
+        headline=f"Build evidence before prioritizing {role}.",
+        reason=f"The current CV does not yet show enough overlap with the role. Start with {gap}.",
+        next_actions=[
+            *report.suggestions[:3],
+            "Return after you have a truthful project, coursework, or work example to add.",
+        ],
     )

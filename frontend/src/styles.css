@@ -127,3 +127,42 @@ button:disabled { cursor: wait; opacity: 0.65; }
   .form-footer button { width: 100%; }
   .insight-grid { grid-template-columns: 1fr; }
 }
+
+/* Target role and location inputs */
+.compact-field { background: #fbfcf9; border: 1px solid #d8e0d9; border-radius: 16px; gap: 10px; padding: 20px 26px; transition: border-color .2s, box-shadow .2s; }
+.compact-field:focus-within { border-color: #70ad86; box-shadow: 0 0 0 3px #e5f4e9; }
+.compact-field input { background: transparent; border: 0; border-bottom: 1px solid #d8e0d9; color: #17212b; font-size: .95rem; font-weight: 500; outline: 0; padding: 6px 0; width: 100%; }
+.compact-field input::placeholder { color: #97a29a; }
+
+/* Application plan card */
+.readiness-card { background: rgb(255 255 255 / 64%); border: 1px solid #d4e5d9; border-left: 5px solid #26714e; border-radius: 13px; margin-top: 14px; padding: 18px; }
+.readiness-card.apply_after_updates { border-left-color: #c48a1c; }
+.readiness-card.build_evidence_first { border-left-color: #b4532a; }
+.readiness-card h3 { color: #1c4030; font-size: 1.1rem; letter-spacing: -.02em; margin: 0 0 6px; }
+.readiness-card > p:not(.result-label) { font-size: .88rem; }
+.readiness-card ol { color: #486255; font-size: .86rem; line-height: 1.5; margin: 12px 0 0; padding-left: 20px; }
+.readiness-card li + li { margin-top: 7px; }
+.result-label { color: #294b3a !important; font-size: .75rem; font-weight: 800; letter-spacing: .055em; margin-bottom: 8px !important; text-transform: uppercase; }
+.tracker-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.tracker-actions button { background: #26714e; border: 0; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 700; padding: 11px 16px; }
+.tracker-actions button.secondary-action { background: #fff; border: 1px solid #9cc9ad; box-shadow: none; color: #26714e; }
+.tracker-actions button.secondary-action:hover { background: #e7f3eb; }
+.feedback-message { color: #26714e !important; font-size: .85rem; font-weight: 600; margin-top: 12px !important; }
+
+/* Local tracker panel */
+.tracker-panel { background: #fffefa; border: 1px solid #e1e5df; border-radius: 20px; margin: 26px auto 0; max-width: 850px; padding: 24px 27px; }
+.tracker-panel h2 { font-size: 1.25rem; letter-spacing: -.03em; margin: 0 0 14px; }
+.empty-tracker { color: #6d786f; font-size: .88rem; margin: 0; }
+.tracker-panel ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.tracker-panel li { align-items: center; background: #fbfcf9; border: 1px solid #e1e5df; border-radius: 12px; display: flex; gap: 12px; justify-content: space-between; padding: 12px 14px; }
+.tracker-panel li div { display: grid; gap: 3px; min-width: 0; }
+.tracker-panel li b { color: #1c4030; font-size: .93rem; }
+.tracker-panel li span { color: #6d786f; font-size: .8rem; }
+.tracker-panel em { border-radius: 100px; flex: 0 0 auto; font-size: .74rem; font-style: normal; font-weight: 750; padding: 5px 10px; }
+.tracker-panel em.saved { background: #fff0cf; color: #8d5b11; }
+.tracker-panel em.applied { background: #dcefe3; color: #286143; }
+
+@media (max-width: 720px) {
+  .tracker-actions button { justify-content: center; width: 100%; }
+  .tracker-panel { padding: 20px; }
+}

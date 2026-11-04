@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas import AnalysisResponse
+from app.schemas import AnalysisResponse, ApplicationPlanResponse
 from app.services.pdf_extractor import extract_resume_from_pdf
-from app.services.skill_matcher import build_match_report
+from app.services.skill_matcher import build_application_plan, build_match_report
 
 app = FastAPI(
     title="CareerLens AI API",
@@ -35,6 +35,8 @@ def health_check() -> dict[str, str]:
 async def analyze_career_fit(
     resume: Annotated[UploadFile, File(description="A resume PDF, 5 MB maximum")],
     job_description: Annotated[str, Form(min_length=30, max_length=20_000)],
+    target_role: Annotated[str, Form(min_length=2, max_length=100)],
+    location: Annotated[str | None, Form(max_length=100)] = None,
 ) -> AnalysisResponse:
     """Extract a resume PDF and return a temporary non-AI analysis response.
 
@@ -53,6 +55,7 @@ async def analyze_career_fit(
     resume_words = len(extracted_resume.text.split())
     job_words = len(job_description.split())
     report = build_match_report(extracted_resume.text, job_description)
+    plan = build_application_plan(report, target_role)
 
     return AnalysisResponse(
         is_demo=True,
@@ -67,4 +70,12 @@ async def analyze_career_fit(
         matching_skills=report.matching_skills,
         missing_skills=report.missing_skills,
         resume_suggestions=report.suggestions,
+        target_role=target_role,
+        location=location.strip() if location else None,
+        application_plan=ApplicationPlanResponse(
+            readiness=plan.readiness,
+            headline=plan.headline,
+            reason=plan.reason,
+            next_actions=plan.next_actions,
+        ),
     )
