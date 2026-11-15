@@ -37,8 +37,23 @@ Environment variables (Render → service → **Environment**):
 |---|---|---|
 | `PYTHON_VERSION` | `3.12.8` (no trailing dot) | Yes |
 | `CAREERLENS_ALLOWED_ORIGINS` | `https://careerlens-ai-lite.netlify.app` (no trailing `/`; comma-separate several) | Yes |
-| `ANTHROPIC_API_KEY` | Key from console.anthropic.com → API Keys | Optional (paid). Without it the app returns the baseline report. |
-| `CAREERLENS_LLM_MODEL` | e.g. `claude-sonnet-5-5` | Optional. Defaults to `claude-opus-5-5`. |
+| `GROQ_API_KEY` | Free key from console.groq.com → API Keys | Optional. Enables AI analysis (free tier). |
+| `GEMINI_API_KEY` | Free key from aistudio.google.com → Get API key | Optional alternative to Groq (free tier). |
+| `ANTHROPIC_API_KEY` | Key from console.anthropic.com → API Keys | Optional (paid). |
+| `CAREERLENS_LLM_PROVIDER` | `groq`, `gemini` or `anthropic` | Optional. Which provider to try first; the others with keys are automatic fallbacks. |
+| `CAREERLENS_LLM_MODEL` | e.g. `llama-3.3-70b-versatile` | Optional. Overrides the provider's default model. |
+
+Without any AI key the app still returns the full rule-based report.
+
+### Keep the free server warm (optional, free)
+
+Free Render services sleep after ~15 minutes idle. The site already wakes the server as soon as the page opens,
+but you can avoid the wait completely with a free uptime monitor:
+
+1. Sign up at **uptimerobot.com** (or **cron-job.org**).
+2. Add an HTTP monitor for `https://careerlens-ai-z6xa.onrender.com/api/health`, every **10 minutes**.
+
+One always-on free service uses ~730 of the 750 free hours per month, so only do this for one service.
 
 ## 2. CareerLens frontend on Netlify
 

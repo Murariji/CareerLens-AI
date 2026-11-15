@@ -1,70 +1,85 @@
 # CareerLens AI
 
-**Live demo:** https://careerlens-ai-lite.netlify.app · **API docs:** https://careerlens-ai-z6xa.onrender.com/docs · [Deployment guide](docs/deployment.md)
+**See exactly how your resume fits a job, with evidence for every claim.**
 
-> The API runs on a free server that sleeps when idle, so the first analysis can take 30–60 seconds.
+**Live demo:** https://careerlens-ai-lite.netlify.app · **Sample report (no upload needed):** https://careerlens-ai-lite.netlify.app/?sample=1 · **API docs:** https://careerlens-ai-z6xa.onrender.com/docs
 
-CareerLens AI is a GenAI-powered career assistant for students and early-career professionals. It compares a resume with a job description, identifies evidence-based skill gaps, and prepares tailored interview questions without inventing qualifications.
+> Runs entirely on free tiers. The API sleeps when idle; the page wakes it as soon as it opens, so it's usually ready by the time you've filled in the form.
 
-## Version 1 goal
+## What it does
 
-A user uploads a resume PDF and pastes a job description into a web page. The application extracts the resume text in memory and returns a structured analysis containing a match summary, strengths, skill gaps, truthful improvement suggestions, and interview questions.
+Upload a resume PDF, paste a job description, and get a dashboard with four tabs:
+
+| Tab | What you get |
+|---|---|
+| **Overview** | Match score, required vs good-to-have skill coverage, ATS readiness, and a concrete next-step plan |
+| **Skills** | Coverage by area (ML & AI, Cloud & MLOps, Data…), each matched skill with the resume line that proves it, and each gap with a 1–2 week project idea to close it |
+| **Resume fixes** | 8-point ATS checklist, priority edits, and (with AI on) before/after bullet rewrites |
+| **Interview prep** | Questions this interviewer is likely to ask *you*, based on your projects and the job's gaps |
+
+## Why it's different
+
+Most resume tools give a black-box score and generic tips, and some will happily "optimise" your resume with skills you don't have. CareerLens is built around **evidence**:
+
+- **Every strength quotes your resume; every gap quotes the job description.** The backend verifies each quote against the real text and drops anything it can't find.
+- **AI rewrites can't invent facts.** A bullet rewrite is rejected if it adds a skill or a number that isn't in your original bullet; missing metrics become `[X]` placeholders for you to fill in.
+- **Smart matching, not just keywords.** "PyTorch *or* TensorFlow" counts as one requirement; a PyTorch project counts as machine-learning evidence; skills that only appear in a skills list are flagged as "listed only".
+- **Private.** Resumes are processed in memory and never stored.
+- **Free and open source.**
 
 ## How it works
 
 ```text
-User's browser
-     |
-     v
-React frontend  -->  FastAPI backend  -->  LLM API
-     ^                    |
-     |                    v
-Display result        Guardrails and validation
+Browser (React, Netlify)
+   │  resume PDF + job description
+   ▼
+FastAPI backend (Render)
+   ├─ PDF text extraction (PyMuPDF, in memory)
+   ├─ Rule-based matcher: 45+ skills, required vs good-to-have, alternatives, implied skills
+   ├─ ATS checker: 8 parsing and keyword checks
+   └─ Optional LLM (Groq / Gemini / Claude) ──► guardrails verify every quote ──► JSON
 ```
 
-The frontend collects and displays information. The backend keeps the AI key secure, gives the model precise instructions, and validates its response before returning it to the user.
+The rule-based report always works, even with no AI key, and it doubles as a benchmark for the AI output.
 
-## Planned capabilities
+## AI providers (optional)
 
-- Compare resume content with job requirements using an explainable baseline
-- Identify matching skills and genuine skill gaps
-- Give suggestions grounded only in the supplied resume and job description
-- Generate targeted interview questions
-- Refuse to invent skills, achievements, or experience
+Set one or more keys on the backend. With several keys, they back each other up: if the first provider fails or hits its free-tier limit, the same request is retried on the next. The order is the table's order (Groq, Gemini, Claude), and `CAREERLENS_LLM_PROVIDER` moves one provider to the front.
 
-## How the current match score works
+| Provider | Env var | Default model | Cost |
+|---|---|---|---|
+| Groq | `GROQ_API_KEY` | `openai/gpt-oss-120b` | Free tier (rate-limited) |
+| Google Gemini | `GEMINI_API_KEY` | `gemini-3.5-flash-lite` | Free tier (Google may use free-tier inputs to improve its products) |
+| Anthropic Claude | `ANTHROPIC_API_KEY` | `claude-opus-5-5` | Paid |
 
-The match score comes from a transparent baseline. It detects a curated set of skills in both the uploaded resume and the job description, then combines skill coverage with relevant-term coverage. The result is an **evidence match**, not a promise of interview success or an ATS score.
+Override the model with `CAREERLENS_LLM_MODEL`. Keys live only on the server (Render → Environment, or `backend/.env` locally) and never in the frontend.
 
-This baseline is important: it is reproducible, testable, and gives us a benchmark for evaluating the AI analysis.
-
-## How the AI analysis works
-
-When the backend has an Anthropic API key, it also asks Claude (`claude-opus-5-5` by default) for a structured analysis: a fit summary, strengths, gaps, truthful resume suggestions, and interview questions. The code is in `backend/app/services/llm_analyzer.py`.
-
-- Every strength must quote the resume word-for-word, and every gap must quote the job description. The backend checks each quote against the real text and drops any claim it cannot find.
-- Resume and job text are passed to the model as data, never as instructions.
-- If no key is set or the AI call fails, the API still returns the baseline report with a short notice.
-
-To enable it locally (PowerShell):
+## Run locally
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "your-key"            # never commit this
-# optional: $env:CAREERLENS_LLM_MODEL = "claude-sonnet-5-5"
-cd backend; .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+# Backend
+cd backend
+python -m venv .venv; .venv\Scripts\pip install -r requirements.txt
+copy .env.example .env      # optional: add GROQ_API_KEY=...
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# Frontend (second terminal)
+cd frontend; npm install; npm run dev     # http://localhost:5173
 ```
 
-## Technology
+Tests: `cd backend; .venv\Scripts\python.exe -m unittest discover -s tests`
 
-- Frontend: React, TypeScript, and Vite
-- Backend: Python and FastAPI
-- AI: LLM API with structured output and guardrails
-- Database: PostgreSQL (added after Version 1 works)
+## Tech stack
 
-## Project guide
+React + TypeScript + Vite · Python + FastAPI · PyMuPDF · httpx · Groq / Gemini / Anthropic APIs · Netlify + Render (free tiers)
 
-See [the project map](docs/project-map.md) to understand every folder and [the roadmap](docs/roadmap.md) for the build sequence.
+## Limitations
 
-## Privacy
+- The skill catalogue is focused on tech, data and ML roles; other fields rely more on the AI analysis.
+- There is no universal "ATS score". The checklist covers what reliably helps parsing and keyword filters.
+- Scanned (image-only) PDFs can't be read.
 
-Never commit API keys, passwords, or uploaded resumes to this repository.
+## Docs
+
+- [Deployment guide](docs/deployment.md): Render + Netlify setup, environment variables, keeping the free server warm
+- [Project map](docs/project-map.md) and [roadmap](docs/roadmap.md)
