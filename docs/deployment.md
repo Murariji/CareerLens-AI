@@ -45,15 +45,22 @@ Environment variables (Render → service → **Environment**):
 
 Without any AI key the app still returns the full rule-based report.
 
-### Keep the free server warm (optional, free)
+### Keep the free server warm (automatic, free)
 
-Free Render services sleep after ~15 minutes idle. The site already wakes the server as soon as the page opens,
-but you can avoid the wait completely with a free uptime monitor:
+Free Render services sleep after ~15 minutes idle, and the first request after that takes 30–60 s.
+The repository includes a GitHub Action, [`.github/workflows/keep-api-warm.yml`](../.github/workflows/keep-api-warm.yml),
+that pings `/api/health` every 10 minutes, so visitors almost never wait. Nothing to set up: it runs once the file is on `main`.
 
-1. Sign up at **uptimerobot.com** (or **cron-job.org**).
-2. Add an HTTP monitor for `https://careerlens-ai-z6xa.onrender.com/api/health`, every **10 minutes**.
+- Check it under the repository's **Actions** tab → **Keep API warm**. You can also run it by hand with **Run workflow**.
+- GitHub can delay scheduled runs at busy times, and it pauses schedules after 60 days without commits.
+  If that happens, press **Enable workflow** in the Actions tab.
+- One always-on free service uses ~730 of Render's 750 free hours per month, so keep only one service warm.
+- Backup option: a free monitor on **uptimerobot.com** pinging the same URL every 5–10 minutes.
 
-One always-on free service uses ~730 of the 750 free hours per month, so only do this for one service.
+### Rate limit
+
+`/api/analyze` allows 20 analyses per visitor per hour by default, which protects the free AI quota.
+Change it with the `CAREERLENS_RATE_LIMIT_PER_HOUR` environment variable on Render.
 
 ## 2. CareerLens frontend on Netlify
 

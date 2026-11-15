@@ -2,57 +2,70 @@
 
 **See exactly how your resume fits a job, with evidence for every claim.**
 
-**Live demo:** https://careerlens-ai-lite.netlify.app · **Sample report (no upload needed):** https://careerlens-ai-lite.netlify.app/?sample=1 · **API docs:** https://careerlens-ai-z6xa.onrender.com/docs
+### 👉 Try it: **[careerlens-ai-lite.netlify.app](https://careerlens-ai-lite.netlify.app)**
+No resume handy? Open the **[sample report](https://careerlens-ai-lite.netlify.app/?sample=1)**. API docs: [careerlens-ai-z6xa.onrender.com/docs](https://careerlens-ai-z6xa.onrender.com/docs)
 
-> Runs entirely on free tiers. The API sleeps when idle; the page wakes it as soon as it opens, so it's usually ready by the time you've filled in the form.
+![Home page in light theme](docs/screenshots/home-light.png)
 
-## What it does
+Free, private, and open source. Upload a resume PDF, paste a job description, and get:
 
-Upload a resume PDF, paste a job description, and get a dashboard with four tabs:
-
-| Tab | What you get |
+| | |
 |---|---|
-| **Overview** | Match score, required vs good-to-have skill coverage, ATS readiness, and a concrete next-step plan |
-| **Skills** | Coverage by area (ML & AI, Cloud & MLOps, Data…), each matched skill with the resume line that proves it, and each gap with a 1–2 week project idea to close it |
-| **Resume fixes** | 8-point ATS checklist, priority edits, and (with AI on) before/after bullet rewrites |
-| **Interview prep** | Questions this interviewer is likely to ask *you*, based on your projects and the job's gaps |
+| **Overview** | Match score, required vs good-to-have coverage, ATS readiness, and your next best action |
+| **Skills map** | Radar chart by area (ML & AI, Cloud & MLOps, Data…), every matched skill with the resume line that proves it |
+| **What-if simulator** | Pick the gaps you could close and watch the score update |
+| **Job description, decoded** | The job post with every skill highlighted: in your resume, missing, or covered by an alternative |
+| **Learning plan** | A week-by-week plan of small, free projects that close the gaps |
+| **Resume fixes** | Copy-ready before/after bullet rewrites and priority edits |
+| **ATS checklist** | 8 checks for parsing and keyword readiness |
+| **Interview prep** | Questions this interviewer is likely to ask *you* |
+
+Light and dark themes (or follow your device), a sidebar to jump between sections, Save as PDF, and a local application tracker.
+
+## Screenshots
+
+| Overview (dark) | Skills map (light) |
+|---|---|
+| ![Overview in dark theme](docs/screenshots/overview-dark.png) | ![Skills map in light theme](docs/screenshots/skills-light.png) |
+| **What-if simulator & job decoder (dark)** | **Resume fixes & ATS checklist (light)** |
+| ![What-if simulator and job description decoder](docs/screenshots/simulator-and-job-decoder-dark.png) | ![Resume fixes and ATS checklist](docs/screenshots/resume-fixes-and-ats-light.png) |
 
 ## Why it's different
 
 Most resume tools give a black-box score and generic tips, and some will happily "optimise" your resume with skills you don't have. CareerLens is built around **evidence**:
 
 - **Every strength quotes your resume; every gap quotes the job description.** The backend verifies each quote against the real text and drops anything it can't find.
-- **AI rewrites can't invent facts.** A bullet rewrite is rejected if it adds a skill or a number that isn't in your original bullet; missing metrics become `[X]` placeholders for you to fill in.
-- **Smart matching, not just keywords.** "PyTorch *or* TensorFlow" counts as one requirement; a PyTorch project counts as machine-learning evidence; skills that only appear in a skills list are flagged as "listed only".
-- **Private.** Resumes are processed in memory and never stored.
-- **Free and open source.**
+- **AI rewrites can't invent facts.** A rewrite is rejected if it adds a skill or a number that isn't in your original bullet; missing metrics become `[X]` placeholders.
+- **Smart matching, not keyword counting.** "PyTorch *or* TensorFlow" is one requirement; a PyTorch project counts as machine-learning evidence; skills that only sit in a skills list are flagged "listed only".
+- **Transparent score.** Required skills 70%, good-to-have 15%, keyword overlap 15%. The what-if simulator uses the same formula.
 
 ## How it works
 
 ```text
-Browser (React, Netlify)
+Browser: React + TypeScript (Netlify)
    │  resume PDF + job description
    ▼
 FastAPI backend (Render)
-   ├─ PDF text extraction (PyMuPDF, in memory)
-   ├─ Rule-based matcher: 45+ skills, required vs good-to-have, alternatives, implied skills
+   ├─ Rate limit (per visitor) and PDF validation
+   ├─ PDF text extraction (PyMuPDF, in memory, never stored)
+   ├─ Rule-based matcher: 49 skills, required vs good-to-have, alternatives, implied skills
    ├─ ATS checker: 8 parsing and keyword checks
-   └─ Optional LLM (Groq / Gemini / Claude) ──► guardrails verify every quote ──► JSON
+   └─ AI analysis: Groq → Gemini fallback → guardrails verify every quote → JSON
 ```
 
-The rule-based report always works, even with no AI key, and it doubles as a benchmark for the AI output.
+The rule-based report always works, even with no AI key, and doubles as a benchmark for the AI output.
 
-## AI providers (optional)
+## AI providers (optional, free)
 
-Set one or more keys on the backend. With several keys, they back each other up: if the first provider fails or hits its free-tier limit, the same request is retried on the next. The order is the table's order (Groq, Gemini, Claude), and `CAREERLENS_LLM_PROVIDER` moves one provider to the front.
+Set one or more keys on the backend. With several keys, they back each other up: if the first fails or hits its free-tier limit, the request is retried on the next.
 
 | Provider | Env var | Default model | Cost |
 |---|---|---|---|
-| Groq | `GROQ_API_KEY` | `openai/gpt-oss-120b` | Free tier (rate-limited) |
-| Google Gemini | `GEMINI_API_KEY` | `gemini-3.5-flash-lite` | Free tier (Google may use free-tier inputs to improve its products) |
+| Groq | `GROQ_API_KEY` | `openai/gpt-oss-120b` | Free tier |
+| Google Gemini | `GEMINI_API_KEY` | `gemini-3.5-flash-lite` | Free tier |
 | Anthropic Claude | `ANTHROPIC_API_KEY` | `claude-opus-5-5` | Paid |
 
-Override the model with `CAREERLENS_LLM_MODEL`. Keys live only on the server (Render → Environment, or `backend/.env` locally) and never in the frontend.
+`CAREERLENS_LLM_PROVIDER` moves one provider to the front; `CAREERLENS_LLM_MODEL` overrides its model. See [docs/deployment.md](docs/deployment.md) for getting free keys.
 
 ## Run locally
 
@@ -60,7 +73,7 @@ Override the model with `CAREERLENS_LLM_MODEL`. Keys live only on the server (Re
 # Backend
 cd backend
 python -m venv .venv; .venv\Scripts\pip install -r requirements.txt
-copy .env.example .env      # optional: add GROQ_API_KEY=...
+copy .env.example .env      # optional: add GROQ_API_KEY / GEMINI_API_KEY
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload
 
 # Frontend (second terminal)
@@ -69,17 +82,26 @@ cd frontend; npm install; npm run dev     # http://localhost:5173
 
 Tests: `cd backend; .venv\Scripts\python.exe -m unittest discover -s tests`
 
-## Tech stack
+## Hosting (all free)
 
-React + TypeScript + Vite · Python + FastAPI · PyMuPDF · httpx · Groq / Gemini / Anthropic APIs · Netlify + Render (free tiers)
+- Frontend on **Netlify**, backend on **Render**. Every push to `main` redeploys both.
+- A scheduled **GitHub Action** ([keep-api-warm.yml](.github/workflows/keep-api-warm.yml)) pings the API every 10 minutes so the free server doesn't fall asleep between visitors.
+- Full setup: [docs/deployment.md](docs/deployment.md).
+
+## Security and privacy
+
+Resumes are processed in memory and never stored; API keys live only on the server; the analyse endpoint is rate-limited. Details and how to report a vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Limitations
 
-- The skill catalogue is focused on tech, data and ML roles; other fields rely more on the AI analysis.
+- The skill catalogue focuses on tech, data and ML roles; other fields rely more on the AI analysis.
 - There is no universal "ATS score". The checklist covers what reliably helps parsing and keyword filters.
 - Scanned (image-only) PDFs can't be read.
 
-## Docs
+## Credits
 
-- [Deployment guide](docs/deployment.md): Render + Netlify setup, environment variables, keeping the free server warm
-- [Project map](docs/project-map.md) and [roadmap](docs/roadmap.md)
+Designed and built by **Murariji Dubey**, with **Claude** (Anthropic) as an AI pair programmer.
+
+## License
+
+[MIT](LICENSE) © 2026 Murariji Dubey
