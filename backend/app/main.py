@@ -9,8 +9,17 @@ load_dotenv()
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.schemas import AnalysisResponse, ApplicationPlanResponse
-from app.services.llm_analyzer import analyze_with_llm
+from app.schemas import (
+    AnalysisResponse,
+    ApplicationPlanResponse,
+    ATSCheckResponse,
+    ATSReportResponse,
+    CategoryCoverageResponse,
+    GapResponse,
+    SkillEvidenceResponse,
+)
+from app.services.ats_checker import run_ats_checks
+from app.services.llm_analyzer import analyze_with_llm, resolve_providers
 from app.services.pdf_extractor import extract_resume_from_pdf
 from app.services.skill_matcher import build_application_plan, build_match_report
 
@@ -51,10 +60,11 @@ def root() -> dict[str, str]:
 
 
 @app.get("/api/health")
-def health_check() -> dict[str, str]:
-    """A small endpoint used to confirm the server is running."""
+def health_check() -> dict[str, str | bool | None]:
+    """Confirms the server is running. The frontend calls it on page load to wake the free server early."""
 
-    return {"status": "ok"}
+    providers = [name for name, _, _ in resolve_providers()]
+    return {"status": "ok", "ai_enabled": bool(providers), "ai_provider": " + ".join(providers) or None}
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
@@ -78,37 +88,53 @@ async def analyze_career_fit(
 
     resume_bytes = await resume.read()
     extracted_resume = extract_resume_from_pdf(resume_bytes)
-    resume_words = len(extracted_resume.text.split())
-    job_words = len(job_description.split())
     report = build_match_report(extracted_resume.text, job_description)
     plan = build_application_plan(report, target_role)
+    ats = run_ats_checks(extracted_resume.text, extracted_resume.links, report)
     llm_result = await analyze_with_llm(extracted_resume.text, job_description, target_role, report)
     ai_analysis = llm_result.analysis
 
-    if ai_analysis:
-        message = (
-            "AI analysis is grounded in your resume and this job description. Every strength and gap "
-            "quotes the text it came from, and the evidence match score is the transparent baseline."
-        )
+    if report.match_score >= 70:
+        verdict = "Strong fit"
+    elif report.match_score >= 45:
+        verdict = "Partial fit"
     else:
-        message = (
-            f"{resume.filename} contains about {resume_words} words and the job description "
-            f"contains about {job_words} words. This is an explainable baseline, not an AI-generated claim."
-        )
+        verdict = "Early fit"
+    if report.required_total:
+        summary = f"{verdict}: {report.required_matched} of {report.required_total} required skills are evidenced in your resume."
+    else:
+        summary = f"{verdict}: no catalogued skills were detected in this job description, so the score uses keyword overlap."
+
+    message = ai_analysis.fit_summary if ai_analysis else (
+        "Rule-based analysis: every skill below is traced to text in your resume or the job description."
+    )
 
     return AnalysisResponse(
         is_demo=ai_analysis is None,
         analysis_source="ai" if ai_analysis else "baseline",
         ai_analysis=ai_analysis,
         ai_notice=llm_result.notice,
-        summary=f"Your current evidence match is {report.match_score}%.",
+        summary=summary,
         message=message,
         resume_filename=resume.filename,
         extracted_links=extracted_resume.links,
         match_score=report.match_score,
+        required_matched=report.required_matched,
+        required_total=report.required_total,
+        bonus_matched=report.bonus_matched,
+        bonus_total=report.bonus_total,
         matching_skills=report.matching_skills,
         missing_skills=report.missing_skills,
+        skill_evidence=[SkillEvidenceResponse(**vars(item)) for item in report.skill_evidence],
+        gaps=[GapResponse(**vars(item)) for item in report.gaps],
+        category_coverage=[CategoryCoverageResponse(**vars(item)) for item in report.category_coverage],
         resume_suggestions=report.suggestions,
+        ats=ATSReportResponse(
+            score=ats.score,
+            passed=ats.passed,
+            total=ats.total,
+            checks=[ATSCheckResponse(**vars(check)) for check in ats.checks],
+        ),
         target_role=target_role,
         location=location.strip() if location else None,
         application_plan=ApplicationPlanResponse(

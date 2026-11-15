@@ -1,6 +1,12 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class StrictModel(BaseModel):
+    """Models sent to LLMs as JSON schemas: no extra keys allowed."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ApplicationPlanResponse(BaseModel):
@@ -10,22 +16,66 @@ class ApplicationPlanResponse(BaseModel):
     next_actions: list[str] = Field(default_factory=list)
 
 
-class EvidencedStrength(BaseModel):
+class SkillEvidenceResponse(BaseModel):
+    skill: str
+    category: str
+    evidence: str
+    demonstrated: bool
+
+
+class GapResponse(BaseModel):
+    skill: str
+    category: str
+    required: bool
+    project_idea: str
+
+
+class CategoryCoverageResponse(BaseModel):
+    category: str
+    matched: int
+    total: int
+
+
+class ATSCheckResponse(BaseModel):
+    id: str
+    label: str
+    passed: bool
+    detail: str
+
+
+class ATSReportResponse(BaseModel):
+    score: int = Field(ge=0, le=100)
+    passed: int
+    total: int
+    checks: list[ATSCheckResponse]
+
+
+# ----- LLM output shapes (also used in the API response after guardrails) -----
+
+class EvidencedStrength(StrictModel):
     skill: str = Field(description="A skill or qualification the job asks for that the resume demonstrates.")
     resume_evidence: str = Field(
         description="A short phrase copied word-for-word from the resume that proves this strength."
     )
 
 
-class SkillGap(BaseModel):
+class SkillGap(StrictModel):
     skill: str = Field(description="A requirement from the job description that the resume does not demonstrate.")
     job_requirement: str = Field(
         description="A short phrase copied word-for-word from the job description that states this requirement."
     )
-    how_to_close: str = Field(description="One honest, concrete step to build or show this skill.")
+    how_to_close: str = Field(description="One honest, concrete step (ideally a small project) to build or show this skill.")
 
 
-class InterviewQuestion(BaseModel):
+class BulletRewrite(StrictModel):
+    original: str = Field(description="One existing resume bullet or sentence, copied word-for-word.")
+    improved: str = Field(
+        description="A stronger version of the same bullet. Use only facts from the original; write [X] placeholders for missing numbers."
+    )
+    why: str = Field(description="One short reason the rewrite is stronger for this job.")
+
+
+class InterviewQuestion(StrictModel):
     question: str = Field(description="A question an interviewer for this role is likely to ask this candidate.")
     why_asked: str = Field(description="Why this question matters, tied to the resume or job description.")
 
@@ -33,16 +83,18 @@ class InterviewQuestion(BaseModel):
 class AIAnalysisResponse(BaseModel):
     """Grounded LLM analysis after CareerLens has verified every quoted piece of evidence."""
 
+    provider: str
     model: str
     fit_summary: str
     strengths: list[EvidencedStrength] = Field(default_factory=list)
     gaps: list[SkillGap] = Field(default_factory=list)
+    bullet_rewrites: list[BulletRewrite] = Field(default_factory=list)
     resume_suggestions: list[str] = Field(default_factory=list)
     interview_questions: list[InterviewQuestion] = Field(default_factory=list)
     removed_unsupported_items: int = Field(
         default=0,
         ge=0,
-        description="How many AI claims were dropped because their quoted evidence was not found in the supplied text.",
+        description="How many AI claims were dropped because their evidence could not be verified in the supplied text.",
     )
 
 
@@ -58,9 +110,17 @@ class AnalysisResponse(BaseModel):
     resume_filename: str
     extracted_links: list[str] = Field(default_factory=list)
     match_score: int = Field(ge=0, le=100)
+    required_matched: int = 0
+    required_total: int = 0
+    bonus_matched: int = 0
+    bonus_total: int = 0
     matching_skills: list[str] = Field(default_factory=list)
     missing_skills: list[str] = Field(default_factory=list)
+    skill_evidence: list[SkillEvidenceResponse] = Field(default_factory=list)
+    gaps: list[GapResponse] = Field(default_factory=list)
+    category_coverage: list[CategoryCoverageResponse] = Field(default_factory=list)
     resume_suggestions: list[str] = Field(default_factory=list)
+    ats: ATSReportResponse | None = None
     target_role: str
     location: str | None = None
     application_plan: ApplicationPlanResponse
