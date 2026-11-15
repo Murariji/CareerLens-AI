@@ -4,7 +4,7 @@
 
 - **Resumes are never stored.** The PDF is read in memory, analysed, and discarded when the request ends. There is no database of resumes.
 - **The job description and resume text are sent to an AI provider only when AI mode is on** (Groq first, Gemini as a backup). Google may use inputs sent to the Gemini *free tier* to improve its products. The rule-based analysis never leaves the server.
-- **The application tracker lives only in your browser** (`localStorage`). It is never sent to the server.
+- **Recent analyses and the application tracker live only in your browser** (`localStorage`, up to 10 recent reports plus tracked ones). They are never sent to our server and can be cleared any time with **Clear** in the sidebar.
 - **No accounts, no cookies, no third-party tracking scripts.**
 - **Anonymous usage counts.** Each page visit is counted with a one-way hash of (day, IP, browser) that changes every day and can't be reversed, so the IP is never stored. Each analysis records only a broad role category (e.g. "ML / AI"), the match score and whether AI was used: no resume text, names or typed role. Totals are public at `/api/stats`.
 - **Report downloads (PDF, Word, Markdown) are generated on the fly and never stored.**

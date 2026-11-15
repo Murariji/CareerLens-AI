@@ -20,7 +20,8 @@ Free, private, and open source. Upload a resume PDF, paste a job description, an
 | **ATS checklist** | 8 checks for parsing and keyword readiness |
 | **Interview prep** | Questions this interviewer is likely to ask *you* |
 
-Light and dark themes (or follow your device), a sidebar to jump between sections, Save as PDF, and a local application tracker.
+Light and dark themes (or follow your device), a collapsible sidebar to jump between sections, **download as PDF, Word or Markdown**,
+**recent analyses you can reopen**, and an application tracker. History and tracker stay in your browser only.
 
 ## Screenshots
 
@@ -48,7 +49,7 @@ Browser: React + TypeScript (Netlify)
 FastAPI backend (Render)
    ├─ Rate limit (per visitor) and PDF validation
    ├─ PDF text extraction (PyMuPDF, in memory, never stored)
-   ├─ Rule-based matcher: 49 skills, required vs good-to-have, alternatives, implied skills
+   ├─ Rule-based matcher: 48 skills, required vs good-to-have, alternatives, implied skills
    ├─ ATS checker: 8 parsing and keyword checks
    └─ AI analysis: Groq → Gemini fallback → guardrails verify every quote → JSON
 ```
@@ -97,6 +98,46 @@ Resumes are processed in memory and never stored; API keys live only on the serv
 - The skill catalogue focuses on tech, data and ML roles; other fields rely more on the AI analysis.
 - There is no universal "ATS score". The checklist covers what reliably helps parsing and keyword filters.
 - Scanned (image-only) PDFs can't be read.
+- Report history and the tracker live in the browser only, so they don't sync across devices.
+
+## Roadmap: future upgrades
+
+Ideas for growing CareerLens, grouped by effort. Each one lists the skill it teaches, so the project grows with what I learn.
+
+### Next (small, high value)
+
+| Upgrade | What it adds | Skills to learn |
+|---|---|---|
+| **Job recommendations** | Suggest live openings for the role and location (Adzuna API has a free key and covers India) | REST API integration, caching |
+| **Paste a job link** | Fetch the job description from a URL instead of copy-paste | Web requests, HTML parsing, respecting robots.txt |
+| **DOCX resume upload** | Accept Word resumes as well as PDF | `python-docx`, file validation |
+| **OCR for scanned PDFs** | Read image-only resumes | Tesseract / OCR, image preprocessing |
+| **Stats dashboard page** | Charts of visits, analyses and roles from `/api/stats` | Data visualisation (Recharts / Chart.js) |
+| **Frontend tests + CI** | Run backend and frontend tests on every push and pull request | Vitest, Playwright, GitHub Actions |
+
+### Later (bigger features)
+
+| Upgrade | What it adds | Skills to learn |
+|---|---|---|
+| **Accounts and cloud history** | Sign in to keep reports and the tracker across devices | Supabase Auth, row-level security, data modelling |
+| **Resume builder** | Apply the suggested rewrites and export an ATS-friendly resume | Document generation (`python-docx`), templating |
+| **Grounded cover letters** | A cover letter that only uses facts from the resume, with the same quote checks | Prompt design, guardrails |
+| **Mock interview mode** | Practise the generated questions with feedback, by text or voice | Conversational AI, speech-to-text, evaluation rubrics |
+| **Semantic matching** | Match "built neural nets" to "deep learning" without exact keywords | Embeddings, vector search (pgvector), sentence-transformers |
+| **Bigger skill taxonomy** | Cover non-tech roles (finance, marketing, design…) | ESCO / O*NET datasets, data pipelines |
+| **Browser extension** | Analyse a job post directly on LinkedIn or Naukri | Chrome extension APIs |
+| **Hindi and other languages** | Reports in the user's language | i18n, multilingual LLM prompting |
+
+### Engineering quality
+
+| Upgrade | Why | Skills to learn |
+|---|---|---|
+| **AI evaluation set** | 20–30 resume/job pairs with expected results, so prompt or model changes are measured, not guessed | LLM evaluation, LLM-as-judge, regression testing |
+| **Observability** | Track latency, provider failures and fallback rate | Logging, metrics, OpenTelemetry |
+| **Docker + infrastructure as code** | One-command local setup and reproducible deploys (`Dockerfile`, `render.yaml`) | Docker, IaC |
+| **Caching and background jobs** | Faster repeat analyses and no request timeouts | Redis/Upstash, task queues |
+| **Custom skill-extraction model** | Replace keyword rules with a small trained model | NER, fine-tuning (spaCy / Hugging Face) |
+| **Accessibility and performance audit** | Better scores for screen readers and slow phones | Lighthouse, WCAG |
 
 ## Credits
 
