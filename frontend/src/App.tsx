@@ -1,5 +1,9 @@
-import { FormEvent, useState } from 'react'
-import { AnalysisResult, analyzeCareerFit } from './api/client'
+import { FormEvent, useEffect, useRef, useState } from 'react'
+import { AnalysisResult, ServerStatus, analyzeCareerFit, wakeServer } from './api/client'
+import { ResultsDashboard } from './components/ResultsDashboard'
+import sampleReport from './sampleReport.json'
+
+const SAMPLE = sampleReport as AnalysisResult
 
 type TrackedOpportunity = {
   id: string
@@ -11,6 +15,7 @@ type TrackedOpportunity = {
 }
 
 const TRACKER_STORAGE_KEY = 'careerlens-tracked-opportunities'
+const PROGRESS_STEPS = ['Reading your PDF', 'Matching skills to the job', 'Running ATS checks', 'Writing your action plan']
 
 function loadTrackedOpportunities(): TrackedOpportunity[] {
   try {
@@ -21,16 +26,49 @@ function loadTrackedOpportunities(): TrackedOpportunity[] {
   }
 }
 
+function ServerPill({ status }: { status: ServerStatus }) {
+  if (status.state === 'waking') return <span className="server-pill waking"><i />Waking server…</span>
+  if (status.state === 'offline') return <span className="server-pill offline"><i />Server unreachable</span>
+  return (
+    <span className="server-pill ready">
+      <i />Ready · {status.aiEnabled ? `AI on (${status.aiProvider})` : 'rule-based mode'}
+    </span>
+  )
+}
+
 function App() {
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [jobDescription, setJobDescription] = useState('')
   const [targetRole, setTargetRole] = useState('')
   const [location, setLocation] = useState('India')
   const [error, setError] = useState('')
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(() =>
+    new URLSearchParams(window.location.search).has('sample') ? SAMPLE : null,
+  )
+  const isSample = analysis === SAMPLE
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [server, setServer] = useState<ServerStatus>({ state: 'waking' })
   const [trackedOpportunities, setTrackedOpportunities] = useState<TrackedOpportunity[]>(loadTrackedOpportunities)
   const [feedback, setFeedback] = useState('')
+  const resultsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let active = true
+    wakeServer().then((status) => { if (active) setServer(status) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!isAnalyzing) return
+    setElapsed(0)
+    const timer = window.setInterval(() => setElapsed((seconds) => seconds + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [isAnalyzing])
+
+  useEffect(() => {
+    if (analysis) resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [analysis])
 
   function persistTracker(nextItems: TrackedOpportunity[]) {
     setTrackedOpportunities(nextItems)
@@ -58,44 +96,25 @@ function App() {
         ? trackedOpportunities.map((entry) => (entry.id === item.id ? item : entry))
         : [...trackedOpportunities, item],
     )
-    setFeedback(status === 'applied' ? 'Marked as applied. Nice—track the outcome when you hear back.' : 'Saved to your local application tracker.')
+    setFeedback(status === 'applied' ? 'Marked as applied. Track the outcome when you hear back.' : 'Saved to your tracker below.')
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
-    setAnalysis(null)
+    setFeedback('')
 
-    if (!resumeFile) {
-      setError('Please choose your resume as a PDF file.')
-      return
-    }
-
-    if (resumeFile.type !== 'application/pdf' && !resumeFile.name.toLowerCase().endsWith('.pdf')) {
-      setError('Please upload a PDF resume.')
-      return
-    }
-
-    if (resumeFile.size > 5 * 1024 * 1024) {
-      setError('Please upload a PDF smaller than 5 MB.')
-      return
-    }
-
-    if (jobDescription.trim().length < 30) {
-      setError('Please enter at least 30 characters in the job description.')
-      return
-    }
-
-    if (targetRole.trim().length < 2) {
-      setError('Please enter the target role you are seeking.')
-      return
-    }
+    if (!resumeFile) return setError('Please choose your resume as a PDF file.')
+    if (resumeFile.type !== 'application/pdf' && !resumeFile.name.toLowerCase().endsWith('.pdf')) return setError('Please upload a PDF resume.')
+    if (resumeFile.size > 5 * 1024 * 1024) return setError('Please upload a PDF smaller than 5 MB.')
+    if (targetRole.trim().length < 2) return setError('Please enter the target role you are seeking.')
+    if (jobDescription.trim().length < 30) return setError('Please paste at least 30 characters of the job description.')
 
     setIsAnalyzing(true)
-
     try {
       const result = await analyzeCareerFit(resumeFile, jobDescription, targetRole, location)
       setAnalysis(result)
+      setServer((current) => (current.state === 'ready' ? current : { state: 'ready', aiEnabled: result.analysis_source === 'ai', aiProvider: result.ai_analysis?.provider ?? null }))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Something went wrong.')
     } finally {
@@ -103,197 +122,122 @@ function App() {
     }
   }
 
+  const stepIndex = Math.min(PROGRESS_STEPS.length - 1, Math.floor(elapsed / 2))
+
   return (
-    <main className="page-shell">
+    <main className="page">
+      <div className="glow glow-a" aria-hidden="true" />
+      <div className="glow glow-b" aria-hidden="true" />
+
       <nav className="topbar" aria-label="Main navigation">
         <a className="brand" href="#top" aria-label="CareerLens AI home">
           <span className="brand-mark">C</span>
           <span>CareerLens <em>AI</em></span>
         </a>
-        <span className="beta-pill">Early access</span>
+        <ServerPill status={server} />
       </nav>
 
-      <section className="hero" id="top">
-        <div className="hero-copy-block">
-          <p className="eyebrow"><span className="pulse-dot" />Evidence-grounded career guidance</p>
-          <h1>Know your fit.<br /><span>Own your next move.</span></h1>
-          <p className="hero-copy">
-            Turn a resume and job description into clear, truthful career guidance—without guessing or inventing experience.
-          </p>
-          <div className="hero-points" aria-label="CareerLens benefits">
-            <span>PDF-first</span><span>Private by design</span><span>Built for action</span>
-          </div>
-        </div>
-        <aside className="trust-card">
-          <p className="trust-title">What you’ll get</p>
-          <div><b>01</b><span>Role-fit summary</span></div>
-          <div><b>02</b><span>Evidence-based gaps</span></div>
-          <div><b>03</b><span>Interview preparation</span></div>
-        </aside>
-      </section>
+      <header className="hero" id="top">
+        <p className="eyebrow">Free · private · no invented claims</p>
+        <h1>See exactly how your resume <span>fits the job</span>.</h1>
+        <p className="hero-copy">
+          Upload your resume and paste a job description. Get a match score, the skills you can prove,
+          the gaps that matter, an ATS checklist, and concrete fixes in under a minute.
+        </p>
+        <ul className="hero-points" aria-label="What you get">
+          <li>Match score</li><li>Skill evidence</li><li>ATS checklist</li><li>Interview prep</li>
+        </ul>
+        <button type="button" className="btn ghost sample-btn" onClick={() => { setError(''); setAnalysis(SAMPLE) }}>
+          No resume handy? View a sample report →
+        </button>
+      </header>
 
-      <section className="workspace">
-        <div className="workspace-heading">
-          <div>
-            <p className="section-kicker">Your starting point</p>
-            <h2>Build your career snapshot</h2>
-          </div>
-          <p>Two inputs. A clearer direction.</p>
+      <form className="card form" onSubmit={handleSubmit}>
+        <div className="form-row">
+          <label className="field">
+            <span>Target role</span>
+            <input value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="e.g. ML/AI Engineer" />
+          </label>
+          <label className="field">
+            <span>Location</span>
+            <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Bengaluru or Remote" />
+          </label>
         </div>
 
-        <form className="analysis-form" onSubmit={handleSubmit}>
-          <label htmlFor="target-role" className="compact-field target-role-field">
-            <span className="step-number">01</span>
-            <span className="field-title">Target role</span>
-            <input id="target-role" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="e.g. Marketing Analyst" />
-          </label>
-          <label htmlFor="location" className="compact-field location-field">
-            <span className="field-title">Preferred location</span>
-            <input id="location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Bengaluru or Remote" />
-          </label>
-          <label htmlFor="resume" className={`file-field ${resumeFile ? 'has-file' : ''}`}>
+        <div className="form-row tall">
+          <label className={`drop ${resumeFile ? 'has-file' : ''}`}>
             <input
-              id="resume"
               className="file-input"
               type="file"
               accept="application/pdf,.pdf"
               onChange={(event) => setResumeFile(event.target.files?.[0] ?? null)}
             />
-            <span className="step-number">02</span>
-            <span className="upload-icon" aria-hidden="true">↑</span>
-            <span className="field-title">{resumeFile ? 'Resume selected' : 'Upload your resume'}</span>
-            <span className="field-description">{resumeFile ? resumeFile.name : 'Choose a PDF file up to 5 MB'}</span>
-            <span className="field-helper">{resumeFile ? 'Ready to analyze' : 'Your file is read temporarily and never stored'}</span>
+            <span className="drop-icon" aria-hidden="true">{resumeFile ? '✓' : '↑'}</span>
+            <b>{resumeFile ? resumeFile.name : 'Upload your resume'}</b>
+            <small>{resumeFile ? 'Ready. Click to change.' : 'PDF up to 5 MB · read in memory, never stored'}</small>
           </label>
 
-          <label htmlFor="job-description" className="job-field">
-            <span className="step-number">03</span>
-            <span className="field-title">Add the job description</span>
+          <label className="field grow">
+            <span>Job description</span>
             <textarea
-              id="job-description"
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
-              placeholder="Paste the responsibilities, required skills, and qualifications here..."
-              rows={10}
+              placeholder="Paste the responsibilities, requirements and good-to-have skills…"
+              rows={9}
             />
-            <span className="field-helper">The more specific the description, the more useful the analysis.</span>
           </label>
+        </div>
 
-          {error && <p className="error" role="alert">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
-          <div className="form-footer">
-            <p><span aria-hidden="true">⌁</span> Your data stays in this session.</p>
-            <button type="submit" disabled={isAnalyzing}>
-              {isAnalyzing ? 'Preparing your analysis...' : 'Analyze my fit'} <span aria-hidden="true">→</span>
-            </button>
-          </div>
-        </form>
-      </section>
+        <div className="form-footer">
+          {isAnalyzing ? (
+            <ol className="progress" aria-live="polite">
+              {PROGRESS_STEPS.map((step, index) => (
+                <li key={step} className={index < stepIndex ? 'done' : index === stepIndex ? 'active' : ''}>{step}</li>
+              ))}
+              <li className="elapsed">{elapsed}s{elapsed > 12 ? ' · waking the free server, almost there' : ''}</li>
+            </ol>
+          ) : (
+            <p className="muted small">Your resume is analysed in memory and never stored.</p>
+          )}
+          <button type="submit" className="btn primary big" disabled={isAnalyzing}>
+            {isAnalyzing ? 'Analysing…' : 'Analyse my fit →'}
+          </button>
+        </div>
+      </form>
 
-      {analysis && (
-        <section className="result-card" aria-live="polite">
-          <div className="result-status"><span className="pulse-dot" />{analysis.is_demo ? 'Analysis pipeline connected' : 'Career analysis'}</div>
-          <div className="result-content">
-            <div className="result-icon" aria-hidden="true">✓</div>
-            <div>
-              <h2>{analysis.summary}</h2>
-              <p>{analysis.message}</p>
-            </div>
-          </div>
-          <div className="match-score" aria-label={`Match score: ${analysis.match_score} percent`}>
-            <div className="score-circle"><strong>{analysis.match_score}</strong><span>%</span></div>
-            <div><b>Evidence match</b><p>Based on skills and relevant terms found in your CV and the role description.</p></div>
-          </div>
-          <div className="insight-grid">
-            <article className="insight-card positive">
-              <p>Skills already evidenced</p>
-              {analysis.matching_skills.length > 0 ? <div className="tag-list">{analysis.matching_skills.map((skill) => <span key={skill}>{skill}</span>)}</div> : <small>No catalogued skill overlap was detected yet.</small>}
-            </article>
-            <article className="insight-card gap">
-              <p>Skills to close the gap</p>
-              {analysis.missing_skills.length > 0 ? <div className="tag-list">{analysis.missing_skills.map((skill) => <span key={skill}>{skill}</span>)}</div> : <small>No catalogued skill gaps were detected.</small>}
-            </article>
-          </div>
-          {analysis.resume_suggestions.length > 0 && (
-            <div className="suggestion-list">
-              <p>Truthful resume improvements</p>
-              <ol>{analysis.resume_suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ol>
-            </div>
-          )}
-          {analysis.ai_notice && <p className="ai-notice" role="status">{analysis.ai_notice}</p>}
-          {analysis.ai_analysis && (
-            <section className="ai-analysis" aria-label="AI analysis">
-              <p className="result-label">AI analysis, grounded in your documents</p>
-              <p className="ai-summary">{analysis.ai_analysis.fit_summary}</p>
-              <div className="insight-grid">
-                <article className="insight-card positive">
-                  <p>Strengths with proof</p>
-                  {analysis.ai_analysis.strengths.length > 0 ? (
-                    <ul className="evidence-list">
-                      {analysis.ai_analysis.strengths.map((item) => (
-                        <li key={item.skill}><b>{item.skill}</b><q>{item.resume_evidence}</q></li>
-                      ))}
-                    </ul>
-                  ) : <small>No strengths could be verified against your resume text.</small>}
-                </article>
-                <article className="insight-card gap">
-                  <p>Gaps to work on</p>
-                  {analysis.ai_analysis.gaps.length > 0 ? (
-                    <ul className="evidence-list">
-                      {analysis.ai_analysis.gaps.map((item) => (
-                        <li key={item.skill}><b>{item.skill}</b><q>{item.job_requirement}</q><span>{item.how_to_close}</span></li>
-                      ))}
-                    </ul>
-                  ) : <small>No verified gaps against this job description.</small>}
-                </article>
-              </div>
-              {analysis.ai_analysis.resume_suggestions.length > 0 && (
-                <div className="suggestion-list">
-                  <p>AI resume suggestions</p>
-                  <ol>{analysis.ai_analysis.resume_suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ol>
-                </div>
-              )}
-              {analysis.ai_analysis.interview_questions.length > 0 && (
-                <div className="suggestion-list">
-                  <p>Interview questions to prepare</p>
-                  <ol>
-                    {analysis.ai_analysis.interview_questions.map((item) => (
-                      <li key={item.question}>{item.question}<small className="why-asked">{item.why_asked}</small></li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-              {analysis.ai_analysis.removed_unsupported_items > 0 && (
-                <p className="guardrail-note">
-                  {analysis.ai_analysis.removed_unsupported_items} AI claim{analysis.ai_analysis.removed_unsupported_items === 1 ? ' was' : 's were'} removed because the evidence could not be found in your documents.
-                </p>
-              )}
-            </section>
-          )}
-          <section className={`readiness-card ${analysis.application_plan.readiness}`}>
-            <p className="result-label">Your next best action</p>
-            <h3>{analysis.application_plan.headline}</h3>
-            <p>{analysis.application_plan.reason}</p>
-            <ol>{analysis.application_plan.next_actions.map((action) => <li key={action}>{action}</li>)}</ol>
-            <div className="tracker-actions">
-              <button type="button" onClick={() => saveToTracker('saved')}>Save opportunity</button>
-              <button type="button" className="secondary-action" onClick={() => saveToTracker('applied')}>Mark as applied</button>
-            </div>
-          </section>
-          {feedback && <p className="feedback-message" role="status">{feedback}</p>}
-          {analysis.extracted_links.length > 0 && (
-            <p className="link-note">
-              <b>{analysis.extracted_links.length}</b> link{analysis.extracted_links.length === 1 ? '' : 's'} found in your resume. They were extracted but not opened.
-            </p>
-          )}
-        </section>
-      )}
-      <section className="tracker-panel" aria-label="Local application tracker">
-        <div><p className="section-kicker">Your local tracker</p><h2>Opportunities you’re acting on</h2></div>
-        {trackedOpportunities.length === 0 ? <p className="empty-tracker">Save an analyzed role to begin tracking it. Your tracker stays in this browser for now.</p> : (
-          <ul>{trackedOpportunities.map((item) => <li key={item.id}><div><b>{item.role}</b><span>{item.location || 'Location not set'} · {item.score}% evidence match</span></div><em className={item.status}>{item.status === 'applied' ? 'Applied' : 'Saved'}</em></li>)}</ul>
+      <div ref={resultsRef}>
+        {isSample && (
+          <p className="sample-banner">
+            Sample report for a fictional candidate (Priya, ML/AI Engineer), shown in AI mode. Upload your own resume above to get yours.
+          </p>
+        )}
+        {analysis && <ResultsDashboard analysis={analysis} onTrack={saveToTracker} />}
+        {feedback && <p className="feedback" role="status">{feedback}</p>}
+      </div>
+
+      <section className="card tracker" aria-label="Application tracker">
+        <p className="kicker">Your tracker</p>
+        <h2>Opportunities you're acting on</h2>
+        {trackedOpportunities.length === 0 ? (
+          <p className="muted">Save an analysed role to start tracking it. The tracker stays in this browser.</p>
+        ) : (
+          <ul>
+            {trackedOpportunities.map((item) => (
+              <li key={item.id}>
+                <div><b>{item.role}</b><span>{item.location || 'Location not set'} · {item.score}% match</span></div>
+                <em className={item.status}>{item.status === 'applied' ? 'Applied' : 'Saved'}</em>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
+
+      <footer className="footer">
+        <span>CareerLens AI · open source</span>
+        <a href="https://github.com/Murariji/CareerLens-AI" target="_blank" rel="noreferrer">GitHub</a>
+      </footer>
     </main>
   )
 }

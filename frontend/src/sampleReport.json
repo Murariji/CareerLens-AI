@@ -1,0 +1,365 @@
+{
+  "is_demo": false,
+  "analysis_source": "ai",
+  "ai_analysis": {
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "fit_summary": "Priya is a credible early-career ML candidate: shipped PyTorch, FastAPI and RAG projects with measurable results and an ML internship. The main gaps are cloud deployment and statistics, both fixable with one focused project.",
+    "strengths": [
+      {
+        "skill": "PyTorch / deep learning",
+        "resume_evidence": "Trained a PyTorch CNN image classifier reaching 92% accuracy on 10,000 plant-disease images."
+      },
+      {
+        "skill": "Model serving with FastAPI",
+        "resume_evidence": "Built a FastAPI service that serves model predictions to 200 users with 120 ms median latency."
+      },
+      {
+        "skill": "LLMs and RAG",
+        "resume_evidence": "Developed a RAG chatbot over course notes using LangChain and FAISS"
+      },
+      {
+        "skill": "Model evaluation",
+        "resume_evidence": "Created an evaluation notebook comparing 4 models on precision and recall"
+      }
+    ],
+    "gaps": [
+      {
+        "skill": "Cloud deployment",
+        "job_requirement": "Deploy and monitor services on AWS or Azure",
+        "how_to_close": "Deploy your FastAPI classifier on AWS Lambda or EC2 free tier, add basic CloudWatch logging, and put the architecture diagram in the README (about 1 week)."
+      },
+      {
+        "skill": "Statistics",
+        "job_requirement": "Understanding of data analysis, statistics, and model evaluation metrics",
+        "how_to_close": "Add confidence intervals and a significance test to your 4-model comparison notebook and explain the results in plain words."
+      },
+      {
+        "skill": "Agile teamwork",
+        "job_requirement": "collaborate using Git in an Agile team",
+        "how_to_close": "If your internship used sprints or stand-ups, say so in the intern bullets; otherwise run your next project in 1-week sprints on GitHub Projects."
+      }
+    ],
+    "bullet_rewrites": [
+      {
+        "original": "Collaborated with 2 engineers to deploy a model behind an internal API.",
+        "improved": "Deployed a model behind an internal API with 2 engineers, enabling [N] internal users to get predictions in [X] ms.",
+        "why": "Leads with the deployment outcome the job asks for; fill in the real numbers or drop them."
+      },
+      {
+        "original": "Improved data pipeline speed by 30% by rewriting slow Pandas transformations.",
+        "improved": "Cut data pipeline runtime by 30% by rewriting slow Pandas transformations, speeding up daily model retraining.",
+        "why": "Ties the result to the ML workflow this role cares about."
+      }
+    ],
+    "resume_suggestions": [
+      "Move the RAG chatbot to your first project: LLMs and RAG are named responsibilities for this role.",
+      "Add a link to each project's GitHub repo directly under its bullet.",
+      "If you used Docker in the FastAPI project, say so in that bullet instead of only in the skills list.",
+      "Add one line on how you evaluated the RAG chatbot (e.g. answer accuracy on a test set) if you measured it."
+    ],
+    "interview_questions": [
+      {
+        "question": "Your CNN reached 92% accuracy. What was the baseline, and how did you check it wasn't overfitting?",
+        "why_asked": "Tests depth on your strongest ML claim and on model evaluation, a stated requirement."
+      },
+      {
+        "question": "How did your RAG chatbot choose which chunks to retrieve, and how would you measure answer quality?",
+        "why_asked": "The role works with RAG pipelines; interviewers probe retrieval and evaluation."
+      },
+      {
+        "question": "How would you deploy your FastAPI model service on AWS and monitor it?",
+        "why_asked": "Cloud deployment is required and not yet shown on your resume."
+      },
+      {
+        "question": "Explain precision vs recall. Which mattered more in your 4-model comparison and why?",
+        "why_asked": "Model evaluation metrics are explicitly required."
+      }
+    ],
+    "removed_unsupported_items": 1
+  },
+  "ai_notice": null,
+  "summary": "Partial fit: 14 of 19 required skills are evidenced in your resume.",
+  "message": "Priya is a credible early-career ML candidate: shipped PyTorch, FastAPI and RAG projects with measurable results and an ML internship. The main gaps are cloud deployment and statistics, both fixable with one focused project.",
+  "resume_filename": "priya-sharma-resume.pdf",
+  "extracted_links": [],
+  "match_score": 67,
+  "required_matched": 14,
+  "required_total": 19,
+  "bonus_matched": 3,
+  "bonus_total": 4,
+  "matching_skills": [
+    "Computer Vision",
+    "Data Analysis",
+    "Deep Learning",
+    "Docker",
+    "FastAPI",
+    "Git",
+    "LLMs",
+    "LangChain",
+    "Machine Learning",
+    "NumPy",
+    "Pandas",
+    "PyTorch",
+    "Python",
+    "RAG",
+    "REST APIs",
+    "SQL",
+    "Vector Databases"
+  ],
+  "missing_skills": [
+    "AWS",
+    "Agile",
+    "Azure",
+    "Hugging Face",
+    "Prompt Engineering",
+    "Statistics"
+  ],
+  "skill_evidence": [
+    {
+      "skill": "Computer Vision",
+      "category": "ML & AI",
+      "evidence": "Top 5% in a national Kaggle-style hackathon on image classification.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Data Analysis",
+      "category": "Data",
+      "evidence": "Cleaned and analysed 50,000 rows of sales data with Pandas and SQL to find the top 3 revenue drivers.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Deep Learning",
+      "category": "ML & AI",
+      "evidence": "Trained a PyTorch CNN image classifier reaching 92% accuracy on 10,000 plant-disease images.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Docker",
+      "category": "Cloud & MLOps",
+      "evidence": "Python, PyTorch, SQL, Pandas, NumPy, Docker, Git, FastAPI, LangChain",
+      "demonstrated": false
+    },
+    {
+      "skill": "FastAPI",
+      "category": "Web & APIs",
+      "evidence": "Built a FastAPI service that serves model predictions to 200 users with 120 ms median latency.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Git",
+      "category": "Tools & practices",
+      "evidence": "github.com/priya-demo",
+      "demonstrated": false
+    },
+    {
+      "skill": "LLMs",
+      "category": "ML & AI",
+      "evidence": "Final-year B.Tech Computer Science student focused on machine learning and LLM applications.",
+      "demonstrated": true
+    },
+    {
+      "skill": "LangChain",
+      "category": "ML & AI",
+      "evidence": "Developed a RAG chatbot over course notes using LangChain and FAISS, answering 300+ student questions.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Machine Learning",
+      "category": "ML & AI",
+      "evidence": "Final-year B.Tech Computer Science student focused on machine learning and LLM applications.",
+      "demonstrated": true
+    },
+    {
+      "skill": "NumPy",
+      "category": "Data",
+      "evidence": "Python, PyTorch, SQL, Pandas, NumPy, Docker, Git, FastAPI, LangChain",
+      "demonstrated": false
+    },
+    {
+      "skill": "Pandas",
+      "category": "Data",
+      "evidence": "Cleaned and analysed 50,000 rows of sales data with Pandas and SQL to find the top 3 revenue drivers.",
+      "demonstrated": true
+    },
+    {
+      "skill": "PyTorch",
+      "category": "ML & AI",
+      "evidence": "Trained a PyTorch CNN image classifier reaching 92% accuracy on 10,000 plant-disease images.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Python",
+      "category": "Programming",
+      "evidence": "Python, PyTorch, SQL, Pandas, NumPy, Docker, Git, FastAPI, LangChain",
+      "demonstrated": false
+    },
+    {
+      "skill": "RAG",
+      "category": "ML & AI",
+      "evidence": "Developed a RAG chatbot over course notes using LangChain and FAISS, answering 300+ student questions.",
+      "demonstrated": true
+    },
+    {
+      "skill": "REST APIs",
+      "category": "Web & APIs",
+      "evidence": "Built a FastAPI service that serves model predictions to 200 users with 120 ms median latency.",
+      "demonstrated": true
+    },
+    {
+      "skill": "SQL",
+      "category": "Programming",
+      "evidence": "Cleaned and analysed 50,000 rows of sales data with Pandas and SQL to find the top 3 revenue drivers.",
+      "demonstrated": true
+    },
+    {
+      "skill": "Vector Databases",
+      "category": "ML & AI",
+      "evidence": "Developed a RAG chatbot over course notes using LangChain and FAISS, answering 300+ student questions.",
+      "demonstrated": true
+    }
+  ],
+  "gaps": [
+    {
+      "skill": "AWS",
+      "category": "Cloud & MLOps",
+      "required": true,
+      "project_idea": "Deploy a small API or model on the AWS free tier (e.g. Lambda or EC2) and note the architecture."
+    },
+    {
+      "skill": "Agile",
+      "category": "Tools & practices",
+      "required": true,
+      "project_idea": "Run a team or solo project in 1-week sprints on a free Jira or GitHub Projects board."
+    },
+    {
+      "skill": "Azure",
+      "category": "Cloud & MLOps",
+      "required": true,
+      "project_idea": "Deploy a small app on Azure (student credits) and describe the services used."
+    },
+    {
+      "skill": "Prompt Engineering",
+      "category": "ML & AI",
+      "required": true,
+      "project_idea": "Compare 3 prompt versions on 20 test inputs and document which worked best and why."
+    },
+    {
+      "skill": "Statistics",
+      "category": "ML & AI",
+      "required": true,
+      "project_idea": "Run an A/B-test style analysis on a public dataset and explain p-values and confidence intervals."
+    },
+    {
+      "skill": "Hugging Face",
+      "category": "ML & AI",
+      "required": false,
+      "project_idea": "Fine-tune or deploy a Hugging Face model and publish it as a free Hugging Face Space."
+    }
+  ],
+  "category_coverage": [
+    {
+      "category": "Cloud & MLOps",
+      "matched": 1,
+      "total": 3
+    },
+    {
+      "category": "Data",
+      "matched": 3,
+      "total": 3
+    },
+    {
+      "category": "ML & AI",
+      "matched": 8,
+      "total": 11
+    },
+    {
+      "category": "Programming",
+      "matched": 2,
+      "total": 2
+    },
+    {
+      "category": "Tools & practices",
+      "matched": 1,
+      "total": 2
+    },
+    {
+      "category": "Web & APIs",
+      "matched": 2,
+      "total": 2
+    }
+  ],
+  "resume_suggestions": [
+    "AWS is required but your resume doesn't show it. If you have used it, add a bullet that proves it; if not, a quick way to build evidence: Deploy a small API or model on the AWS free tier (e.g. Lambda or EC2) and note the architecture.",
+    "Agile is required but your resume doesn't show it. If you have used it, add a bullet that proves it; if not, a quick way to build evidence: Run a team or solo project in 1-week sprints on a free Jira or GitHub Projects board.",
+    "Docker, Git, NumPy appear only in a skills list. Add a project or experience bullet showing how you used them, so recruiters and ATS see real evidence.",
+    "Hugging Face is a good-to-have that would set you apart: Fine-tune or deploy a Hugging Face model and publish it as a free Hugging Face Space."
+  ],
+  "ats": {
+    "score": 88,
+    "passed": 7,
+    "total": 8,
+    "checks": [
+      {
+        "id": "readable",
+        "label": "Text is machine-readable",
+        "passed": true,
+        "detail": "About 188 words were extracted."
+      },
+      {
+        "id": "contact",
+        "label": "Email and phone number",
+        "passed": true,
+        "detail": "Both found."
+      },
+      {
+        "id": "profiles",
+        "label": "LinkedIn and GitHub/portfolio links",
+        "passed": true,
+        "detail": "Both found."
+      },
+      {
+        "id": "sections",
+        "label": "Standard section headings",
+        "passed": true,
+        "detail": "Found: Experience, Education, Skills, Projects."
+      },
+      {
+        "id": "metrics",
+        "label": "Results are quantified",
+        "passed": true,
+        "detail": "10 bullets include numbers."
+      },
+      {
+        "id": "verbs",
+        "label": "Bullets start with action verbs",
+        "passed": true,
+        "detail": "7 bullets start with strong verbs."
+      },
+      {
+        "id": "length",
+        "label": "Length suits an early-career resume",
+        "passed": false,
+        "detail": "Too short: add projects, coursework, or internships."
+      },
+      {
+        "id": "keywords",
+        "label": "Covers the job's required keywords",
+        "passed": true,
+        "detail": "14 of 19 required skills appear in your resume."
+      }
+    ]
+  },
+  "target_role": "ML/AI Engineer",
+  "location": "Bengaluru",
+  "application_plan": {
+    "readiness": "apply_after_updates",
+    "headline": "Apply after a focused update for ML/AI Engineer.",
+    "reason": "Your profile has relevant evidence, but AWS needs a clearer proof point or a learning plan.",
+    "next_actions": [
+      "This week: close the AWS gap with the project idea in the Skills tab.",
+      "Rewrite your top 3 bullets to lead with measurable results.",
+      "Save this opportunity and apply once the update is truthful and complete."
+    ]
+  }
+}

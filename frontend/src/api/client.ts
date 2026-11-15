@@ -1,12 +1,19 @@
 export type AIAnalysis = {
+  provider: string
   model: string
   fit_summary: string
   strengths: { skill: string; resume_evidence: string }[]
   gaps: { skill: string; job_requirement: string; how_to_close: string }[]
+  bullet_rewrites: { original: string; improved: string; why: string }[]
   resume_suggestions: string[]
   interview_questions: { question: string; why_asked: string }[]
   removed_unsupported_items: number
 }
+
+export type SkillEvidence = { skill: string; category: string; evidence: string; demonstrated: boolean }
+export type Gap = { skill: string; category: string; required: boolean; project_idea: string }
+export type CategoryCoverage = { category: string; matched: number; total: number }
+export type ATSCheck = { id: string; label: string; passed: boolean; detail: string }
 
 export type AnalysisResult = {
   is_demo: boolean
@@ -18,9 +25,17 @@ export type AnalysisResult = {
   resume_filename: string
   extracted_links: string[]
   match_score: number
+  required_matched: number
+  required_total: number
+  bonus_matched: number
+  bonus_total: number
   matching_skills: string[]
   missing_skills: string[]
+  skill_evidence: SkillEvidence[]
+  gaps: Gap[]
+  category_coverage: CategoryCoverage[]
   resume_suggestions: string[]
+  ats: { score: number; passed: number; total: number; checks: ATSCheck[] } | null
   target_role: string
   location: string | null
   application_plan: {
@@ -31,9 +46,32 @@ export type AnalysisResult = {
   }
 }
 
-// Set VITE_API_BASE_URL in Netlify (Site configuration > Environment variables) for the live site.
+export type ServerStatus =
+  | { state: 'waking' }
+  | { state: 'ready'; aiEnabled: boolean; aiProvider: string | null }
+  | { state: 'offline' }
+
+// Set VITE_API_BASE_URL in Netlify (Project configuration > Environment variables) for the live site.
 // It is public by design: never put secret keys in a VITE_ variable.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
+
+/** Ping the API as soon as the page opens so a sleeping free-tier server wakes up while the user fills the form. */
+export async function wakeServer(): Promise<ServerStatus> {
+  const deadline = Date.now() + 90_000
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health`, { cache: 'no-store' })
+      if (response.ok) {
+        const body = await response.json()
+        return { state: 'ready', aiEnabled: Boolean(body.ai_enabled), aiProvider: body.ai_provider ?? null }
+      }
+    } catch {
+      // Server still waking up; retry below.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+  }
+  return { state: 'offline' }
+}
 
 export async function analyzeCareerFit(
   resume: File,
