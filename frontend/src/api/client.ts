@@ -62,12 +62,30 @@ export type ServerStatus =
 // It is public by design: never put secret keys in a VITE_ variable.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
 
-/** Ping the API as soon as the page opens so a sleeping free-tier server wakes up while the user fills the form. */
+export type UsageStats = {
+  persistent: boolean
+  visits: number
+  unique_visitors: number
+  analyses: number
+}
+
+export type ReportFormat = 'pdf' | 'doc' | 'md'
+
+/**
+ * Ping the API as soon as the page opens so a sleeping free-tier server wakes up while the user
+ * fills the form. The first ping carries ?visit=1 so the server can count an anonymous visit.
+ */
+let visitCounted = false
+
 export async function wakeServer(): Promise<ServerStatus> {
   const deadline = Date.now() + 90_000
+  // Count one visit per page load, even if this runs twice (React StrictMode in development).
+  let first = !visitCounted
+  visitCounted = true
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health`, { cache: 'no-store' })
+      const response = await fetch(`${API_BASE_URL}/api/health${first ? '?visit=1' : ''}`, { cache: 'no-store' })
+      first = false
       if (response.ok) {
         const body = await response.json()
         return { state: 'ready', aiEnabled: Boolean(body.ai_enabled), aiProvider: body.ai_provider ?? null }
@@ -78,6 +96,49 @@ export async function wakeServer(): Promise<ServerStatus> {
     await new Promise((resolve) => setTimeout(resolve, 3000))
   }
   return { state: 'offline' }
+}
+
+export async function fetchStats(): Promise<UsageStats | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stats`, { cache: 'no-store' })
+    return response.ok ? await response.json() as UsageStats : null
+  } catch {
+    return null
+  }
+}
+
+/** Ask the server to build the report file and trigger a browser download. Nothing is stored. */
+export async function downloadReport(analysis: AnalysisResult, format: ReportFormat): Promise<void> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/report/${format}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(analysis),
+    })
+  } catch {
+    throw new Error('Could not reach the server to build your report. Please try again in a moment.')
+  }
+  if (!response.ok) {
+    let detail = ''
+    try {
+      detail = (await response.json())?.detail
+    } catch {
+      // Ignore non-JSON error bodies.
+    }
+    throw new Error(typeof detail === 'string' && detail ? detail : 'The report could not be generated. Please try again.')
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `careerlens-report.${format}`
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export async function analyzeCareerFit(

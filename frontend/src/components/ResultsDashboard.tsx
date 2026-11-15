@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
-import { AnalysisResult } from '../api/client'
+import { ReactNode, useEffect, useRef, useState } from 'react'
+import { AnalysisResult, ReportFormat, downloadReport } from '../api/client'
 import { Icon, IconName } from './Icon'
 import { CopyButton, JobHighlighter, LearningPlan, Meter, RadarChart, ScoreRing, WhatIfSimulator, tone } from './Tools'
 
@@ -12,6 +12,7 @@ export const DASHBOARD_SECTIONS: { id: string; label: string; icon: IconName }[]
   { id: 'resume-fixes', label: 'Resume fixes', icon: 'edit' },
   { id: 'ats', label: 'ATS checklist', icon: 'shield' },
   { id: 'interview', label: 'Interview prep', icon: 'chat' },
+  { id: 'save', label: 'Save report', icon: 'download' },
 ]
 
 function Section({ id, icon, title, subtitle, children, actions }: {
@@ -34,6 +35,70 @@ function Section({ id, icon, title, subtitle, children, actions }: {
       </header>
       {children}
     </section>
+  )
+}
+
+const DOWNLOAD_OPTIONS: { format: ReportFormat; label: string; hint: string }[] = [
+  { format: 'pdf', label: 'PDF', hint: 'Best for sharing and printing' },
+  { format: 'doc', label: 'Word (.doc)', hint: 'Edit in Word, Google Docs or LibreOffice' },
+  { format: 'md', label: 'Markdown (.md)', hint: 'Plain text for Notion, GitHub or notes' },
+]
+
+function DownloadMenu({ analysis }: { analysis: AnalysisResult }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState<ReportFormat | null>(null)
+  const [error, setError] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [open])
+
+  async function download(format: ReportFormat) {
+    setBusy(format)
+    setError('')
+    try {
+      await downloadReport(analysis, format)
+      setOpen(false)
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Download failed.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="download" ref={menuRef}>
+      <button type="button" className="btn primary small-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <Icon name="download" size={15} />Download report
+      </button>
+      {open && (
+        <div className="download-menu" role="menu">
+          {DOWNLOAD_OPTIONS.map((option) => (
+            <button key={option.format} type="button" role="menuitem" disabled={busy !== null} onClick={() => download(option.format)}>
+              <b>{busy === option.format ? 'Preparing…' : option.label}</b>
+              <small>{option.hint}</small>
+            </button>
+          ))}
+          <button type="button" role="menuitem" onClick={() => { setOpen(false); window.print() }}>
+            <b>Print</b>
+            <small>Or "Save as PDF" from your browser's print dialog</small>
+          </button>
+          {error && <p className="download-error" role="alert">{error}</p>}
+          <p className="download-note">Free. Generated on the fly and never stored.</p>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -65,9 +130,11 @@ function fallbackQuestions(analysis: AnalysisResult) {
 export function ResultsDashboard({
   analysis,
   onTrack,
+  trackedStatus = null,
 }: {
   analysis: AnalysisResult
   onTrack: (status: 'saved' | 'applied') => void
+  trackedStatus?: 'saved' | 'applied' | null
 }) {
   const ai = analysis.ai_analysis
   const ats = analysis.ats
@@ -92,9 +159,7 @@ export function ResultsDashboard({
             <Icon name={ai ? 'sparkles' : 'check'} size={14} />
             {ai ? `AI + rules · ${ai.provider}` : 'Rule-based'}
           </span>
-          <button type="button" className="icon-btn" onClick={() => window.print()}>
-            <Icon name="download" size={15} /><span>Save as PDF</span>
-          </button>
+          <DownloadMenu analysis={analysis} />
         </div>
       </header>
 
@@ -124,8 +189,22 @@ export function ResultsDashboard({
           <p className="muted">{plan.reason}</p>
           <ol className="steps">{plan.next_actions.map((action) => <li key={action}>{action}</li>)}</ol>
           <div className="actions">
-            <button type="button" className="btn primary" onClick={() => onTrack('saved')}><Icon name="bookmark" size={16} />Save opportunity</button>
-            <button type="button" className="btn ghost" onClick={() => onTrack('applied')}><Icon name="check" size={16} />Mark as applied</button>
+            <button
+              type="button"
+              className={`btn ${trackedStatus ? 'ghost done' : 'primary'}`}
+              aria-pressed={trackedStatus !== null}
+              onClick={() => onTrack('saved')}
+            >
+              <Icon name={trackedStatus ? 'check' : 'bookmark'} size={16} />{trackedStatus ? 'Saved to tracker' : 'Save opportunity'}
+            </button>
+            <button
+              type="button"
+              className={`btn ${trackedStatus === 'applied' ? 'primary done' : 'ghost'}`}
+              aria-pressed={trackedStatus === 'applied'}
+              onClick={() => onTrack('applied')}
+            >
+              <Icon name="check" size={16} />{trackedStatus === 'applied' ? 'Applied ✓' : 'Mark as applied'}
+            </button>
           </div>
         </div>
       </Section>
@@ -260,6 +339,32 @@ export function ResultsDashboard({
           </div>
         )}
       </Section>
+
+      <Section id="save" icon="download" title="Save your report" subtitle="Keep a copy to work through later or share with a mentor. Free, and never stored on our side.">
+        <div className="save-grid">
+          {DOWNLOAD_OPTIONS.map((option) => <SaveCard key={option.format} analysis={analysis} format={option.format} label={option.label} hint={option.hint} />)}
+        </div>
+      </Section>
     </div>
+  )
+}
+
+function SaveCard({ analysis, format, label, hint }: { analysis: AnalysisResult; format: ReportFormat; label: string; hint: string }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
+  async function save() {
+    setState('busy')
+    try {
+      await downloadReport(analysis, format)
+      setState('done')
+    } catch {
+      setState('error')
+    }
+  }
+  return (
+    <button type="button" className={`save-card ${state}`} onClick={save} disabled={state === 'busy'}>
+      <span className="save-icon"><Icon name={state === 'done' ? 'check' : 'download'} size={20} /></span>
+      <b>{label}</b>
+      <small>{state === 'busy' ? 'Preparing…' : state === 'done' ? 'Downloaded' : state === 'error' ? 'Failed. Click to retry' : hint}</small>
+    </button>
   )
 }

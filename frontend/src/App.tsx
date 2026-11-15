@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
-import { AnalysisResult, ServerStatus, analyzeCareerFit, wakeServer } from './api/client'
+import { AnalysisResult, ServerStatus, UsageStats, analyzeCareerFit, fetchStats, wakeServer } from './api/client'
 import { Icon, IconName } from './components/Icon'
 import { DASHBOARD_SECTIONS, ResultsDashboard } from './components/ResultsDashboard'
 import sampleReport from './sampleReport.json'
@@ -115,6 +115,7 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [server, setServer] = useState<ServerStatus>({ state: 'waking' })
+  const [usage, setUsage] = useState<UsageStats | null>(null)
   const [trackedOpportunities, setTrackedOpportunities] = useState<TrackedOpportunity[]>(loadTrackedOpportunities)
   const [feedback, setFeedback] = useState('')
   const [activeSection, setActiveSection] = useState('analyse')
@@ -130,9 +131,22 @@ function App() {
 
   useEffect(() => {
     let active = true
-    wakeServer().then((status) => { if (active) setServer(status) })
+    wakeServer().then(async (status) => {
+      if (!active) return
+      setServer(status)
+      if (status.state === 'ready') {
+        const stats = await fetchStats()
+        if (active) setUsage(stats)
+      }
+    })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (!feedback) return
+    const timer = window.setTimeout(() => setFeedback(''), 4000)
+    return () => window.clearTimeout(timer)
+  }, [feedback])
 
   useEffect(() => {
     if (!isAnalyzing) return
@@ -187,7 +201,7 @@ function App() {
         ? trackedOpportunities.map((entry) => (entry.id === item.id ? item : entry))
         : [...trackedOpportunities, item],
     )
-    setFeedback(status === 'applied' ? 'Marked as applied. Track the outcome when you hear back.' : 'Saved to your tracker.')
+    setFeedback(status === 'applied' ? `Marked "${item.role}" as applied. Good luck!` : `Saved "${item.role}" to your tracker.`)
   }
 
   function removeFromTracker(id: string) {
@@ -270,6 +284,12 @@ function App() {
                 <Icon name="sparkles" size={16} />View a sample report
               </button>
             </div>
+            {usage?.persistent && usage.analyses > 0 && (
+              <p className="usage">
+                <span><b>{usage.analyses.toLocaleString()}</b> resumes analysed</span>
+                <span><b>{usage.unique_visitors.toLocaleString()}</b> visitors</span>
+              </p>
+            )}
           </header>
 
           <form className="panel form" onSubmit={handleSubmit}>
@@ -337,8 +357,13 @@ function App() {
               Sample report for a fictional candidate (Priya, ML/AI Engineer), shown in AI mode. Upload your own resume above to get yours.
             </p>
           )}
-          {analysis && <ResultsDashboard analysis={analysis} onTrack={saveToTracker} />}
-          {feedback && <p className="feedback" role="status">{feedback}</p>}
+          {analysis && (
+            <ResultsDashboard
+              analysis={analysis}
+              onTrack={saveToTracker}
+              trackedStatus={trackedOpportunities.find((item) => item.role === analysis.target_role && item.location === (analysis.location ?? ''))?.status ?? null}
+            />
+          )}
         </div>
 
         <section id="tracker" className="panel section">
@@ -365,6 +390,14 @@ function App() {
             </ul>
           )}
         </section>
+
+        {feedback && (
+          <div className="toast" role="status">
+            <Icon name="check" size={16} />
+            <span>{feedback}</span>
+            <button type="button" className="link-btn" onClick={() => { setFeedback(''); goTo('tracker') }}>View tracker</button>
+          </div>
+        )}
 
         <footer className="footer">
           <span>© 2026 Murariji Dubey · Built with AI assistance from Claude · MIT License</span>
