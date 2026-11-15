@@ -3,8 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Evidence-grounded career analysis." />
+    <meta name="description" content="Free, private resume-to-job analysis: match score, skill evidence, ATS checklist, learning plan and interview prep." />
+    <meta name="theme-color" content="#0b1020" />
     <title>CareerLens AI</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light/dark flash.
+      (function () {
+        var choice = 'system';
+        try { choice = localStorage.getItem('careerlens-theme') || 'system'; } catch (e) {}
+        var dark = choice === 'dark' || (choice === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

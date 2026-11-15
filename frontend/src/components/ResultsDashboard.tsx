@@ -1,55 +1,51 @@
-import { useState } from 'react'
+import { ReactNode } from 'react'
 import { AnalysisResult } from '../api/client'
+import { Icon, IconName } from './Icon'
+import { CopyButton, JobHighlighter, LearningPlan, Meter, RadarChart, ScoreRing, WhatIfSimulator, tone } from './Tools'
 
-type Tab = 'overview' | 'skills' | 'fixes' | 'interview'
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'fixes', label: 'Resume fixes' },
-  { id: 'interview', label: 'Interview prep' },
+export const DASHBOARD_SECTIONS: { id: string; label: string; icon: IconName }[] = [
+  { id: 'overview', label: 'Overview', icon: 'gauge' },
+  { id: 'skills', label: 'Skills map', icon: 'radar' },
+  { id: 'what-if', label: 'What-if simulator', icon: 'sliders' },
+  { id: 'job-match', label: 'Job description', icon: 'file' },
+  { id: 'learning-plan', label: 'Learning plan', icon: 'map' },
+  { id: 'resume-fixes', label: 'Resume fixes', icon: 'edit' },
+  { id: 'ats', label: 'ATS checklist', icon: 'shield' },
+  { id: 'interview', label: 'Interview prep', icon: 'chat' },
 ]
 
-function tone(percent: number): 'good' | 'mid' | 'low' {
-  if (percent >= 70) return 'good'
-  if (percent >= 45) return 'mid'
-  return 'low'
-}
-
-function ScoreRing({ value, label }: { value: number; label: string }) {
-  const radius = 54
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - Math.max(0, Math.min(value, 100)) / 100)
+function Section({ id, icon, title, subtitle, children, actions }: {
+  id: string
+  icon: IconName
+  title: string
+  subtitle?: string
+  children: ReactNode
+  actions?: ReactNode
+}) {
   return (
-    <div className={`score-ring ${tone(value)}`} role="img" aria-label={`${label}: ${value} percent`}>
-      <svg viewBox="0 0 128 128" aria-hidden="true">
-        <circle className="ring-track" cx="64" cy="64" r={radius} />
-        <circle
-          className="ring-value"
-          cx="64"
-          cy="64"
-          r={radius}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="ring-label">
-        <strong>{value}<small>%</small></strong>
-        <span>{label}</span>
-      </div>
-    </div>
+    <section id={id} className="panel section" aria-labelledby={`${id}-title`}>
+      <header className="section-head">
+        <span className="section-icon"><Icon name={icon} size={18} /></span>
+        <div>
+          <h3 id={`${id}-title`}>{title}</h3>
+          {subtitle && <p className="muted small">{subtitle}</p>}
+        </div>
+        {actions && <div className="section-actions">{actions}</div>}
+      </header>
+      {children}
+    </section>
   )
 }
 
-function Meter({ label, matched, total, suffix }: { label: string; matched: number; total: number; suffix?: string }) {
-  const percent = total ? Math.round((matched / total) * 100) : 0
+function KpiCard({ icon, label, value, hint, tone: kpiTone }: { icon: IconName; label: string; value: string; hint: string; tone: string }) {
   return (
-    <div className="meter">
-      <div className="meter-head">
+    <div className={`kpi ${kpiTone}`}>
+      <span className="kpi-icon"><Icon name={icon} size={18} /></span>
+      <div>
+        <b>{value}</b>
         <span>{label}</span>
-        <b>{total ? `${matched}/${total}` : 'n/a'}{suffix ? ` ${suffix}` : ''}</b>
+        <small>{hint}</small>
       </div>
-      <div className="meter-track"><div className={`meter-fill ${tone(percent)}`} style={{ width: `${percent}%` }} /></div>
     </div>
   )
 }
@@ -73,210 +69,197 @@ export function ResultsDashboard({
   analysis: AnalysisResult
   onTrack: (status: 'saved' | 'applied') => void
 }) {
-  const [tab, setTab] = useState<Tab>(() => {
-    const requested = new URLSearchParams(window.location.search).get('tab')
-    return TABS.some((item) => item.id === requested) ? (requested as Tab) : 'overview'
-  })
   const ai = analysis.ai_analysis
   const ats = analysis.ats
   const requiredGaps = analysis.gaps.filter((g) => g.required)
-  const bonusGaps = analysis.gaps.filter((g) => !g.required)
   const strengths = ai?.strengths.length
     ? ai.strengths.map((s) => ({ skill: s.skill, evidence: s.resume_evidence, demonstrated: true }))
     : analysis.skill_evidence
   const suggestions = ai?.resume_suggestions.length ? ai.resume_suggestions : analysis.resume_suggestions
   const questions = ai?.interview_questions.length ? ai.interview_questions : fallbackQuestions(analysis)
   const plan = analysis.application_plan
+  const requiredPercent = analysis.required_total ? Math.round((analysis.required_matched / analysis.required_total) * 100) : 0
 
   return (
-    <section className="dashboard" aria-live="polite">
+    <div className="dashboard" aria-live="polite">
       <header className="dash-header">
         <div>
           <p className="kicker">{analysis.target_role}{analysis.location ? ` · ${analysis.location}` : ''}</p>
           <h2>{analysis.summary}</h2>
         </div>
-        <span className={`source-pill ${analysis.analysis_source}`}>
-          {ai ? `AI + rules · ${ai.provider}` : 'Rule-based analysis'}
-        </span>
+        <div className="dash-tools">
+          <span className={`source-pill ${analysis.analysis_source}`}>
+            <Icon name={ai ? 'sparkles' : 'check'} size={14} />
+            {ai ? `AI + rules · ${ai.provider}` : 'Rule-based'}
+          </span>
+          <button type="button" className="icon-btn" onClick={() => window.print()}>
+            <Icon name="download" size={15} /><span>Save as PDF</span>
+          </button>
+        </div>
       </header>
 
-      {analysis.ai_notice && <p className="notice" role="status">{analysis.ai_notice}</p>}
+      {analysis.ai_notice && <p className="notice" role="status"><Icon name="alert" size={16} />{analysis.ai_notice}</p>}
 
-      <nav className="tabs" role="tablist" aria-label="Analysis sections">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={tab === item.id ? 'active' : ''}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      {tab === 'overview' && (
-        <div className="tab-panel" role="tabpanel">
-          <div className="overview-grid">
-            <div className="panel score-panel">
-              <ScoreRing value={analysis.match_score} label="match" />
-              <div className="meters">
-                <Meter label="Required skills" matched={analysis.required_matched} total={analysis.required_total} />
-                <Meter label="Good-to-have" matched={analysis.bonus_matched} total={analysis.bonus_total} />
-                {ats && <Meter label="ATS readiness" matched={ats.passed} total={ats.total} suffix="checks" />}
-              </div>
-            </div>
-            <div className="panel">
-              <p className="panel-title">The short version</p>
-              <p className="lead">{analysis.message}</p>
-              <div className="quick-stats">
-                <div><b>{analysis.matching_skills.length}</b><span>skills matched</span></div>
-                <div><b>{requiredGaps.length}</b><span>required gaps</span></div>
-                <div><b>{ats ? `${ats.score}%` : '–'}</b><span>ATS checks passed</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`panel plan ${plan.readiness}`}>
-            <p className="panel-title">Your next best action</p>
-            <h3>{plan.headline}</h3>
-            <p className="muted">{plan.reason}</p>
-            <ol className="steps">{plan.next_actions.map((action) => <li key={action}>{action}</li>)}</ol>
-            <div className="actions">
-              <button type="button" className="btn primary" onClick={() => onTrack('saved')}>Save opportunity</button>
-              <button type="button" className="btn ghost" onClick={() => onTrack('applied')}>Mark as applied</button>
+      <Section id="overview" icon="gauge" title="Overview" subtitle="Your fit at a glance and the single best next step.">
+        <div className="overview-hero">
+          <ScoreRing value={analysis.match_score} label="match" />
+          <div className="overview-copy">
+            <p className="lead">{analysis.message}</p>
+            <div className="meters">
+              <Meter label="Required skills" matched={analysis.required_matched} total={analysis.required_total} />
+              <Meter label="Good-to-have skills" matched={analysis.bonus_matched} total={analysis.bonus_total} />
+              {ats && <Meter label="ATS readiness" matched={ats.passed} total={ats.total} suffix="checks" />}
             </div>
           </div>
         </div>
-      )}
-
-      {tab === 'skills' && (
-        <div className="tab-panel" role="tabpanel">
-          {analysis.category_coverage.length > 0 && (
-            <div className="panel">
-              <p className="panel-title">Coverage by area</p>
-              <div className="category-grid">
-                {analysis.category_coverage.map((c) => <Meter key={c.category} label={c.category} matched={c.matched} total={c.total} />)}
-              </div>
-            </div>
-          )}
-
-          <div className="two-col">
-            <div className="panel">
-              <p className="panel-title good-text">✓ Strengths with proof</p>
-              {strengths.length === 0 ? (
-                <p className="muted">No job skills were found in your resume yet.</p>
-              ) : (
-                <ul className="evidence">
-                  {strengths.map((item) => (
-                    <li key={item.skill}>
-                      <div className="evidence-head">
-                        <b>{item.skill}</b>
-                        {!item.demonstrated && <span className="tag warn">listed only</span>}
-                      </div>
-                      {item.evidence && <q>{item.evidence}</q>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="panel">
-              <p className="panel-title bad-text">✗ Gaps and how to close them</p>
-              {ai?.gaps.length ? (
-                <ul className="evidence">
-                  {ai.gaps.map((g) => (
-                    <li key={g.skill}>
-                      <div className="evidence-head"><b>{g.skill}</b></div>
-                      <q>{g.job_requirement}</q>
-                      <p className="idea">→ {g.how_to_close}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : analysis.gaps.length === 0 ? (
-                <p className="muted">No gaps against the skills in this job description.</p>
-              ) : (
-                <ul className="evidence">
-                  {[...requiredGaps, ...bonusGaps].map((g) => (
-                    <li key={g.skill}>
-                      <div className="evidence-head">
-                        <b>{g.skill}</b>
-                        <span className={`tag ${g.required ? 'bad' : 'info'}`}>{g.required ? 'required' : 'good to have'}</span>
-                      </div>
-                      <p className="idea">→ {g.project_idea}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        <div className="kpi-grid">
+          <KpiCard icon="target" label="Match score" value={`${analysis.match_score}%`} hint="Weighted: required 70%, bonus 15%, keywords 15%" tone={tone(analysis.match_score)} />
+          <KpiCard icon="check" label="Skills proven" value={`${analysis.matching_skills.length}`} hint={`${requiredPercent}% of required skills`} tone={tone(requiredPercent)} />
+          <KpiCard icon="alert" label="Required gaps" value={`${requiredGaps.length}`} hint="See the learning plan" tone={requiredGaps.length === 0 ? 'good' : requiredGaps.length <= 2 ? 'mid' : 'low'} />
+          <KpiCard icon="shield" label="ATS checks" value={ats ? `${ats.passed}/${ats.total}` : '–'} hint="Parsing and keyword readiness" tone={ats ? tone(ats.score) : 'mid'} />
+        </div>
+        <div className={`plan ${plan.readiness}`}>
+          <p className="panel-title">Your next best action</p>
+          <h4>{plan.headline}</h4>
+          <p className="muted">{plan.reason}</p>
+          <ol className="steps">{plan.next_actions.map((action) => <li key={action}>{action}</li>)}</ol>
+          <div className="actions">
+            <button type="button" className="btn primary" onClick={() => onTrack('saved')}><Icon name="bookmark" size={16} />Save opportunity</button>
+            <button type="button" className="btn ghost" onClick={() => onTrack('applied')}><Icon name="check" size={16} />Mark as applied</button>
           </div>
         </div>
-      )}
+      </Section>
 
-      {tab === 'fixes' && (
-        <div className="tab-panel" role="tabpanel">
-          {ai && ai.bullet_rewrites.length > 0 && (
-            <div className="panel">
-              <p className="panel-title">Bullet rewrites</p>
-              <div className="rewrites">
-                {ai.bullet_rewrites.map((r) => (
-                  <article key={r.original} className="rewrite">
-                    <p className="before"><span>Before</span>{r.original}</p>
-                    <p className="after"><span>After</span>{r.improved}</p>
-                    <p className="why">{r.why}</p>
-                  </article>
+      <Section id="skills" icon="radar" title="Skills map" subtitle="Where you're strong, where you're thin, and the proof behind each skill.">
+        {analysis.category_coverage.length >= 3 ? (
+          <div className="skills-visual">
+            <RadarChart data={analysis.category_coverage} />
+            <div className="meters">
+              {analysis.category_coverage.map((c) => <Meter key={c.category} label={c.category} matched={c.matched} total={c.total} />)}
+            </div>
+          </div>
+        ) : analysis.category_coverage.length > 0 && (
+          <div className="meters">
+            {analysis.category_coverage.map((c) => <Meter key={c.category} label={c.category} matched={c.matched} total={c.total} />)}
+          </div>
+        )}
+        <div className="two-col">
+          <div>
+            <p className="panel-title good-text">Strengths with proof</p>
+            {strengths.length === 0 ? <p className="muted">No job skills were found in your resume yet.</p> : (
+              <ul className="evidence">
+                {strengths.map((item) => (
+                  <li key={item.skill}>
+                    <div className="evidence-head">
+                      <b>{item.skill}</b>
+                      {!item.demonstrated && <span className="tag warn">listed only</span>}
+                    </div>
+                    {item.evidence && <q>{item.evidence}</q>}
+                  </li>
                 ))}
-              </div>
-              <p className="footnote">Fill in any [X] placeholders with your real numbers, or delete them.</p>
-            </div>
-          )}
-
-          <div className="two-col">
-            {ats && (
-              <div className="panel">
-                <p className="panel-title">ATS readiness · {ats.passed}/{ats.total}</p>
-                <ul className="checklist">
-                  {ats.checks.map((check) => (
-                    <li key={check.id} className={check.passed ? 'pass' : 'fail'}>
-                      <span className="check-icon" aria-hidden="true">{check.passed ? '✓' : '!'}</span>
-                      <div><b>{check.label}</b><p>{check.detail}</p></div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </ul>
             )}
-            <div className="panel">
-              <p className="panel-title">Priority edits</p>
-              <ol className="steps">{suggestions.map((s) => <li key={s}>{s}</li>)}</ol>
-              {ai && ai.removed_unsupported_items > 0 && (
-                <p className="footnote">
-                  {ai.removed_unsupported_items} AI suggestion{ai.removed_unsupported_items === 1 ? ' was' : 's were'} removed because the evidence could not be verified in your documents.
-                </p>
-              )}
-            </div>
           </div>
-        </div>
-      )}
-
-      {tab === 'interview' && (
-        <div className="tab-panel" role="tabpanel">
-          <div className="panel">
-            <p className="panel-title">Questions to prepare for</p>
-            {questions.length === 0 ? (
-              <p className="muted">Add more detail to your resume or the job description to generate questions.</p>
-            ) : (
-              <ol className="questions">
-                {questions.map((q) => (
-                  <li key={q.question}><b>{q.question}</b><p>{q.why_asked}</p></li>
+          <div>
+            <p className="panel-title bad-text">Gaps</p>
+            {ai?.gaps.length ? (
+              <ul className="evidence">
+                {ai.gaps.map((g) => (
+                  <li key={g.skill}>
+                    <div className="evidence-head"><b>{g.skill}</b></div>
+                    <q>{g.job_requirement}</q>
+                    <p className="idea">→ {g.how_to_close}</p>
+                  </li>
                 ))}
-              </ol>
+              </ul>
+            ) : analysis.gaps.length === 0 ? <p className="muted">No gaps against the skills in this job description.</p> : (
+              <ul className="evidence">
+                {analysis.gaps.map((g) => (
+                  <li key={g.skill}>
+                    <div className="evidence-head">
+                      <b>{g.skill}</b>
+                      <span className={`tag ${g.required ? 'bad' : 'info'}`}>{g.required ? 'required' : 'good to have'}</span>
+                    </div>
+                    <p className="idea">→ {g.project_idea}</p>
+                  </li>
+                ))}
+              </ul>
             )}
-            {!ai && <p className="footnote">Generated from your skills and gaps. Enable AI on the server for questions tailored to your projects.</p>}
           </div>
         </div>
+      </Section>
+
+      <Section id="what-if" icon="sliders" title="What-if simulator" subtitle="See how your score would change if you closed specific gaps.">
+        <WhatIfSimulator analysis={analysis} />
+      </Section>
+
+      <Section id="job-match" icon="file" title="Job description, decoded" subtitle="Every skill the job mentions, colour-coded against your resume.">
+        <JobHighlighter segments={analysis.job_segments} />
+      </Section>
+
+      <Section id="learning-plan" icon="map" title="Learning plan" subtitle="A week-by-week plan to close the gaps with small, public projects.">
+        <LearningPlan gaps={analysis.gaps} />
+      </Section>
+
+      <Section id="resume-fixes" icon="edit" title="Resume fixes" subtitle="Copy-ready rewrites and the edits that matter most.">
+        {ai && ai.bullet_rewrites.length > 0 && (
+          <div className="rewrites">
+            {ai.bullet_rewrites.map((r) => (
+              <article key={r.original} className="rewrite">
+                <p className="before"><span>Before</span>{r.original}</p>
+                <p className="after"><span>After</span>{r.improved}</p>
+                <div className="rewrite-foot">
+                  <p className="why">{r.why}</p>
+                  <CopyButton text={r.improved} />
+                </div>
+              </article>
+            ))}
+            <p className="footnote">Fill in any [X] placeholders with your real numbers, or delete them.</p>
+          </div>
+        )}
+        <p className="panel-title">Priority edits</p>
+        <ol className="steps">{suggestions.map((s) => <li key={s}>{s}</li>)}</ol>
+        {ai && ai.removed_unsupported_items > 0 && (
+          <p className="footnote">
+            <Icon name="shield" size={13} /> {ai.removed_unsupported_items} AI suggestion{ai.removed_unsupported_items === 1 ? ' was' : 's were'} removed because the evidence couldn't be verified in your documents.
+          </p>
+        )}
+      </Section>
+
+      {ats && (
+        <Section id="ats" icon="shield" title={`ATS checklist · ${ats.passed}/${ats.total}`} subtitle="What applicant tracking systems need to read your resume correctly.">
+          <div className="ats-bar" role="img" aria-label={`${ats.passed} of ${ats.total} checks passed`}>
+            {ats.checks.map((check) => <span key={check.id} className={check.passed ? 'pass' : 'fail'} />)}
+          </div>
+          <ul className="checklist">
+            {ats.checks.map((check) => (
+              <li key={check.id} className={check.passed ? 'pass' : 'fail'}>
+                <span className="check-icon" aria-hidden="true">{check.passed ? '✓' : '!'}</span>
+                <div><b>{check.label}</b><p>{check.detail}</p></div>
+              </li>
+            ))}
+          </ul>
+        </Section>
       )}
-    </section>
+
+      <Section
+        id="interview"
+        icon="chat"
+        title="Interview prep"
+        subtitle={ai ? 'Questions tailored to your projects and this job.' : 'Generated from your skills and gaps. AI mode tailors them to your projects.'}
+        actions={questions.length > 0 ? <CopyButton text={questions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')} label="Copy all" /> : undefined}
+      >
+        {questions.length === 0 ? <p className="muted">Add more detail to your resume or the job description to generate questions.</p> : (
+          <div className="questions">
+            {questions.map((q, index) => (
+              <details key={q.question} className="question">
+                <summary><span className="q-num">{index + 1}</span>{q.question}</summary>
+                <p>{q.why_asked}</p>
+              </details>
+            ))}
+          </div>
+        )}
+      </Section>
+    </div>
   )
 }

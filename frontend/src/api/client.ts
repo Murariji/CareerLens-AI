@@ -14,6 +14,11 @@ export type SkillEvidence = { skill: string; category: string; evidence: string;
 export type Gap = { skill: string; category: string; required: boolean; project_idea: string }
 export type CategoryCoverage = { category: string; matched: number; total: number }
 export type ATSCheck = { id: string; label: string; passed: boolean; detail: string }
+export type JobSegment = {
+  text: string
+  skill: string | null
+  status: 'matched' | 'missing_required' | 'missing_bonus' | 'covered' | null
+}
 
 export type AnalysisResult = {
   is_demo: boolean
@@ -34,6 +39,8 @@ export type AnalysisResult = {
   skill_evidence: SkillEvidence[]
   gaps: Gap[]
   category_coverage: CategoryCoverage[]
+  term_coverage: number
+  job_segments: JobSegment[]
   resume_suggestions: string[]
   ats: { score: number; passed: number; total: number; checks: ATSCheck[] } | null
   target_role: string

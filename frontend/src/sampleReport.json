@@ -289,6 +289,354 @@
       "total": 2
     }
   ],
+  "term_coverage": 0.2879,
+  "job_segments": [
+    {
+      "text": "We are hiring an ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "ML",
+      "skill": "Machine Learning",
+      "status": "matched"
+    },
+    {
+      "text": "/AI Engineer to build and deploy ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "machine learning",
+      "skill": "Machine Learning",
+      "status": "matched"
+    },
+    {
+      "text": " models for our products.\n\nResponsibilities:\n- Build, train, and evaluate ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "machine learning",
+      "skill": "Machine Learning",
+      "status": "matched"
+    },
+    {
+      "text": " models using ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Python",
+      "skill": "Python",
+      "status": "matched"
+    },
+    {
+      "text": "\n- Clean and analyze data with ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Pandas",
+      "skill": "Pandas",
+      "status": "matched"
+    },
+    {
+      "text": ", ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "NumPy",
+      "skill": "NumPy",
+      "status": "matched"
+    },
+    {
+      "text": ", and ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "SQL",
+      "skill": "SQL",
+      "status": "matched"
+    },
+    {
+      "text": "\n- Deploy models as ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "REST APIs",
+      "skill": "REST APIs",
+      "status": "matched"
+    },
+    {
+      "text": " using ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "FastAPI",
+      "skill": "FastAPI",
+      "status": "matched"
+    },
+    {
+      "text": " and ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Docker",
+      "skill": "Docker",
+      "status": "matched"
+    },
+    {
+      "text": "\n- Work with ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "large language models",
+      "skill": "LLMs",
+      "status": "matched"
+    },
+    {
+      "text": " (",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "LLMs",
+      "skill": "LLMs",
+      "status": "matched"
+    },
+    {
+      "text": "), ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "prompt engineering",
+      "skill": "Prompt Engineering",
+      "status": "missing_required"
+    },
+    {
+      "text": ", and ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "RAG",
+      "skill": "RAG",
+      "status": "matched"
+    },
+    {
+      "text": " pipelines\n- Track experiments and collaborate using ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Git",
+      "skill": "Git",
+      "status": "matched"
+    },
+    {
+      "text": " in an ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Agile",
+      "skill": "Agile",
+      "status": "missing_required"
+    },
+    {
+      "text": " team\n- Deploy and monitor services on ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "AWS",
+      "skill": "AWS",
+      "status": "missing_required"
+    },
+    {
+      "text": " or ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Azure",
+      "skill": "Azure",
+      "status": "missing_required"
+    },
+    {
+      "text": "\n\nRequirements:\n- Strong ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Python",
+      "skill": "Python",
+      "status": "matched"
+    },
+    {
+      "text": " programming skills\n- Hands-on experience with ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "machine learning",
+      "skill": "Machine Learning",
+      "status": "matched"
+    },
+    {
+      "text": " and ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "deep learning",
+      "skill": "Deep Learning",
+      "status": "matched"
+    },
+    {
+      "text": " (",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "PyTorch",
+      "skill": "PyTorch",
+      "status": "matched"
+    },
+    {
+      "text": " or ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "TensorFlow",
+      "skill": "TensorFlow",
+      "status": "covered"
+    },
+    {
+      "text": ")\n- Understanding of ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "data analysis",
+      "skill": "Data Analysis",
+      "status": "matched"
+    },
+    {
+      "text": ", ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "statistics",
+      "skill": "Statistics",
+      "status": "missing_required"
+    },
+    {
+      "text": ", and model evaluation metrics\n- Experience building ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "REST APIs",
+      "skill": "REST APIs",
+      "status": "matched"
+    },
+    {
+      "text": " and working with ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Docker",
+      "skill": "Docker",
+      "status": "matched"
+    },
+    {
+      "text": "\n- Familiarity with cloud platforms (",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "AWS",
+      "skill": "AWS",
+      "status": "missing_required"
+    },
+    {
+      "text": " or ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Azure",
+      "skill": "Azure",
+      "status": "missing_required"
+    },
+    {
+      "text": ")\n\nGood to have:\n- Experience with ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "Hugging Face",
+      "skill": "Hugging Face",
+      "status": "missing_bonus"
+    },
+    {
+      "text": ", ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "LangChain",
+      "skill": "LangChain",
+      "status": "matched"
+    },
+    {
+      "text": ", or ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "vector databases",
+      "skill": "Vector Databases",
+      "status": "matched"
+    },
+    {
+      "text": "\n- Projects or internships involving ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "NLP",
+      "skill": "NLP",
+      "status": "covered"
+    },
+    {
+      "text": " or ",
+      "skill": null,
+      "status": null
+    },
+    {
+      "text": "computer vision",
+      "skill": "Computer Vision",
+      "status": "matched"
+    },
+    {
+      "text": "\n",
+      "skill": null,
+      "status": null
+    }
+  ],
   "resume_suggestions": [
     "AWS is required but your resume doesn't show it. If you have used it, add a bullet that proves it; if not, a quick way to build evidence: Deploy a small API or model on the AWS free tier (e.g. Lambda or EC2) and note the architecture.",
     "Agile is required but your resume doesn't show it. If you have used it, add a bullet that proves it; if not, a quick way to build evidence: Run a team or solo project in 1-week sprints on a free Jira or GitHub Projects board.",
@@ -357,7 +705,7 @@
     "headline": "Apply after a focused update for ML/AI Engineer.",
     "reason": "Your profile has relevant evidence, but AWS needs a clearer proof point or a learning plan.",
     "next_actions": [
-      "This week: close the AWS gap with the project idea in the Skills tab.",
+      "This week: close the AWS gap with the project in your Learning plan.",
       "Rewrite your top 3 bullets to lead with measurable results.",
       "Save this opportunity and apply once the update is truthful and complete."
     ]
