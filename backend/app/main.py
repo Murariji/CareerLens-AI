@@ -1,12 +1,12 @@
 import os
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from dotenv import load_dotenv
 
 # Read backend/.env (if present) before anything looks at environment variables.
 load_dotenv()
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas import (
@@ -22,8 +22,10 @@ from app.schemas import (
 from app.services.ats_checker import run_ats_checks
 from app.services.llm_analyzer import analyze_with_llm, resolve_providers
 from app.services.pdf_extractor import MAX_RESUME_BYTES, extract_resume_from_pdf
-from app.services.rate_limit import enforce_analysis_limit
+from app.services.rate_limit import client_ip, enforce_analysis_limit, enforce_report_limit
+from app.services.report_export import build_doc, build_markdown, build_pdf, report_filename
 from app.services.skill_matcher import build_application_plan, build_match_report
+from app.services.stats import StatsEvent, role_category, stats_service
 
 app = FastAPI(
     title="CareerLens AI API",
@@ -46,10 +48,11 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root() -> dict[str, str]:
     """A friendly landing response so visiting the bare API URL isn't a 404."""
 
@@ -61,16 +64,53 @@ def root() -> dict[str, str]:
     }
 
 
-@app.get("/api/health")
-def health_check() -> dict[str, str | bool | None]:
-    """Confirms the server is running. The frontend calls it on page load to wake the free server early."""
+@app.api_route("/api/health", methods=["GET", "HEAD"])
+def health_check(request: Request, background_tasks: BackgroundTasks, visit: bool = False) -> dict[str, str | bool | None]:
+    """Confirms the server is running. The frontend calls it with ?visit=1 on page load,
+    which both wakes the free server early and counts an anonymous visit."""
 
+    if visit:
+        visitor = stats_service.visitor_hash(client_ip(request), request.headers.get("user-agent", ""))
+        background_tasks.add_task(stats_service.record, StatsEvent(kind="visit", visitor=visitor))
     providers = [name for name, _, _ in resolve_providers()]
     return {"status": "ok", "ai_enabled": bool(providers), "ai_provider": " + ".join(providers) or None}
 
 
+@app.get("/api/stats")
+async def usage_stats() -> dict[str, Any]:
+    """Anonymous usage totals: visits, unique visitors, analyses, role categories, last 30 days."""
+
+    return await stats_service.summary()
+
+
+REPORT_FORMATS = {
+    "pdf": ("application/pdf", "pdf"),
+    "doc": ("application/msword", "doc"),
+    "md": ("text/markdown; charset=utf-8", "md"),
+}
+
+
+@app.post("/api/report/{fmt}", dependencies=[Depends(enforce_report_limit)])
+def download_report(fmt: Literal["pdf", "doc", "md"], report: AnalysisResponse) -> Response:
+    """Turn an analysis (as returned by /api/analyze) into a PDF, Word or Markdown file. Nothing is stored."""
+
+    if fmt == "pdf":
+        content = build_pdf(report)
+    elif fmt == "doc":
+        content = build_doc(report)
+    else:
+        content = build_markdown(report).encode("utf-8")
+    media_type, extension = REPORT_FORMATS[fmt]
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{report_filename(report, extension)}"'},
+    )
+
+
 @app.post("/api/analyze", response_model=AnalysisResponse, dependencies=[Depends(enforce_analysis_limit)])
 async def analyze_career_fit(
+    background_tasks: BackgroundTasks,
     resume: Annotated[UploadFile, File(description="A resume PDF, 5 MB maximum")],
     job_description: Annotated[str, Form(min_length=30, max_length=20_000)],
     target_role: Annotated[str, Form(min_length=2, max_length=100)],
@@ -96,6 +136,10 @@ async def analyze_career_fit(
     ats = run_ats_checks(extracted_resume.text, extracted_resume.links, report)
     llm_result = await analyze_with_llm(extracted_resume.text, job_description, target_role, report)
     ai_analysis = llm_result.analysis
+    background_tasks.add_task(
+        stats_service.record,
+        StatsEvent(kind="analysis", role_category=role_category(target_role), score=report.match_score, ai=ai_analysis is not None),
+    )
 
     if report.match_score >= 70:
         verdict = "Strong fit"

@@ -48,12 +48,23 @@ analysis_limiter = RateLimiter(
 )
 
 
-def enforce_analysis_limit(request: Request) -> None:
-    wait = analysis_limiter.check(client_ip(request))
+report_limiter = RateLimiter(max_requests=60, window_seconds=3600)
+
+
+def _enforce(limiter: RateLimiter, request: Request, what: str) -> None:
+    wait = limiter.check(client_ip(request))
     if wait:
         minutes = max(1, round(wait / 60))
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"You've reached the hourly limit for free analyses. Please try again in about {minutes} minute{'s' if minutes != 1 else ''}.",
+            detail=f"You've reached the hourly limit for free {what}. Please try again in about {minutes} minute{'s' if minutes != 1 else ''}.",
             headers={"Retry-After": str(wait)},
         )
+
+
+def enforce_analysis_limit(request: Request) -> None:
+    _enforce(analysis_limiter, request, "analyses")
+
+
+def enforce_report_limit(request: Request) -> None:
+    _enforce(report_limiter, request, "report downloads")

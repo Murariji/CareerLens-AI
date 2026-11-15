@@ -57,6 +57,33 @@ that pings `/api/health` every 10 minutes, so visitors almost never wait. Nothin
 - One always-on free service uses ~730 of Render's 750 free hours per month, so keep only one service warm.
 - Backup option: a free monitor on **uptimerobot.com** pinging the same URL every 5–10 minutes.
 
+### Usage stats (visitors and resumes analysed)
+
+The backend counts anonymous events: each page visit (with a daily-rotating, non-reversible visitor hash
+instead of the IP) and each analysis (broad role category, match score, AI used or not). It never stores
+resume text, names or the typed role. See them at **`/api/stats`**:
+https://careerlens-ai-z6xa.onrender.com/api/stats
+
+| Storage | When | Notes |
+|---|---|---|
+| In memory | Default, no setup | Resets whenever Render restarts or redeploys. The site hides the public counter in this mode. |
+| Supabase (free) | When the three variables below are set | Permanent. The site shows "N resumes analysed · M visitors". |
+
+To make stats permanent and add a reliable 5-minute wake-up ping:
+
+1. In a Supabase project you own, open **SQL Editor**, paste [`docs/supabase/careerlens_stats.sql`](supabase/careerlens_stats.sql) and run it.
+2. Run `select value from careerlens.config where key = 'stats_token';` and copy the value.
+3. In **Project Settings → API**, copy the **Project URL** and the **publishable (anon) key**.
+4. On Render, add `CAREERLENS_SUPABASE_URL`, `CAREERLENS_SUPABASE_KEY` and `CAREERLENS_STATS_TOKEN`, then **Save, rebuild, and deploy**.
+5. Check https://careerlens-ai-z6xa.onrender.com/api/stats: `"storage": "supabase"`.
+
+The SQL also schedules `careerlens-keep-warm` with Supabase's built-in cron, which is more reliable than GitHub's scheduler.
+
+### Report downloads
+
+`POST /api/report/{pdf|doc|md}` turns an analysis into a file. It is generated on the server with PyMuPDF,
+so it costs nothing, and nothing is stored. Limited to 60 downloads per visitor per hour.
+
 ### Rate limit
 
 `/api/analyze` allows 20 analyses per visitor per hour by default, which protects the free AI quota.
