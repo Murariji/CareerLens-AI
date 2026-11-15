@@ -1,5 +1,9 @@
 # CareerLens AI
 
+**Live demo:** https://careerlens-ai-lite.netlify.app · **API docs:** https://careerlens-ai-z6xa.onrender.com/docs · [Deployment guide](docs/deployment.md)
+
+> The API runs on a free server that sleeps when idle, so the first analysis can take 30–60 seconds.
+
 CareerLens AI is a GenAI-powered career assistant for students and early-career professionals. It compares a resume with a job description, identifies evidence-based skill gaps, and prepares tailored interview questions without inventing qualifications.
 
 ## Version 1 goal

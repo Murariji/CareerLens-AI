@@ -47,13 +47,28 @@ export async function analyzeCareerFit(
   formData.append('target_role', targetRole)
   formData.append('location', location)
 
-  const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-    method: 'POST',
-    body: formData,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/analyze`, {
+      method: 'POST',
+      body: formData,
+    })
+  } catch {
+    // The browser gives no details for network-level failures (server asleep, offline, blocked request).
+    throw new Error(
+      'Could not reach the CareerLens server. It sleeps when idle and can take up to a minute to wake up, so please wait a moment and try again.',
+    )
+  }
 
   if (!response.ok) {
-    throw new Error('The analysis request could not be completed. Please try again.')
+    let detail = ''
+    try {
+      const body = await response.json()
+      detail = typeof body?.detail === 'string' ? body.detail : ''
+    } catch {
+      // Non-JSON error page; fall back to the generic message below.
+    }
+    throw new Error(detail || 'The analysis request could not be completed. Please try again.')
   }
 
   return response.json() as Promise<AnalysisResult>

@@ -1,7 +1,10 @@
+import logging
 from dataclasses import dataclass
 
 import pymupdf
 from fastapi import HTTPException, status
+
+logger = logging.getLogger(__name__)
 
 MAX_RESUME_BYTES = 5 * 1024 * 1024
 
@@ -27,15 +30,23 @@ def extract_resume_from_pdf(file_bytes: bytes) -> ExtractedResume:
             detail="The uploaded file is not a valid PDF.",
         )
 
-    try:
-        document = pymupdf.open(stream=file_bytes, filetype="pdf")
-    except (pymupdf.FileDataError, RuntimeError) as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="CareerLens could not read this PDF.",
-        ) from error
+    unreadable = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="CareerLens could not read this PDF. Try exporting it again as a standard PDF (e.g. 'Save as PDF' from Word or Google Docs).",
+    )
 
     try:
+        document = pymupdf.open(stream=file_bytes, filetype="pdf")
+    except Exception as error:  # Malformed, encrypted, or unusual PDFs raise varied pymupdf errors.
+        logger.warning("Could not open uploaded PDF: %s", error)
+        raise unreadable from error
+
+    try:
+        if document.needs_pass:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This PDF is password-protected. Please upload a version without a password.",
+            )
         pages = [page.get_text("text", sort=True) for page in document]
         links = [
             link["uri"]
@@ -43,6 +54,13 @@ def extract_resume_from_pdf(file_bytes: bytes) -> ExtractedResume:
             for link in page.get_links()
             if isinstance(link.get("uri"), str) and link["uri"].startswith(("http://", "https://"))
         ]
+    except HTTPException:
+        raise
+    except Exception as error:
+        # An unhandled error would become a 500 without CORS headers, which the browser
+        # reports only as "Failed to fetch". Return a clear 400 instead.
+        logger.warning("Could not extract text from uploaded PDF: %s", error)
+        raise unreadable from error
     finally:
         document.close()
 

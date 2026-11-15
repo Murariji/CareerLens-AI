@@ -38,6 +38,18 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    """A friendly landing response so visiting the bare API URL isn't a 404."""
+
+    return {
+        "name": "CareerLens AI API",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/api/health",
+    }
+
+
 @app.get("/api/health")
 def health_check() -> dict[str, str]:
     """A small endpoint used to confirm the server is running."""
