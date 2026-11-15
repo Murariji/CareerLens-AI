@@ -65,6 +65,14 @@ class AnalyzeEndpointTests(unittest.TestCase):
         self.assertTrue(checks["profiles"])
         self.assertTrue(checks["metrics"])
         self.assertTrue(any(c["category"] for c in body["category_coverage"]))
+        self.assertGreater(body["term_coverage"], 0)
+        # The highlighted segments rebuild the job description exactly.
+        self.assertEqual("".join(s["text"] for s in body["job_segments"]), JOB)
+        statuses = {s["skill"]: s["status"] for s in body["job_segments"] if s["skill"]}
+        self.assertEqual(statuses["PyTorch"], "matched")
+        self.assertEqual(statuses["TensorFlow"], "covered")
+        self.assertEqual(statuses["AWS"], "missing_required")
+        self.assertEqual(statuses["Hugging Face"], "missing_bonus")
 
 
 if __name__ == "__main__":

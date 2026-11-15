@@ -129,6 +129,15 @@ class CategoryCoverage:
 
 
 @dataclass(frozen=True)
+class TextSegment:
+    """A slice of the job description; `status` is set when the slice names a skill."""
+
+    text: str
+    skill: str | None = None
+    status: str | None = None  # matched | missing_required | missing_bonus | covered
+
+
+@dataclass(frozen=True)
 class MatchReport:
     match_score: int
     matching_skills: list[str]
@@ -142,6 +151,8 @@ class MatchReport:
     skill_evidence: list[SkillEvidence] = field(default_factory=list)
     gaps: list[GapDetail] = field(default_factory=list)
     category_coverage: list[CategoryCoverage] = field(default_factory=list)
+    term_coverage: float = 0.0
+    job_segments: list[TextSegment] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -246,6 +257,29 @@ def _find_evidence(skill: str, resume_text: str) -> tuple[str, bool]:
     return best or ("", False)
 
 
+def _segment_job_description(job_description: str, status_by_skill: dict[str, str]) -> list[TextSegment]:
+    """Split the job description into plain text and highlighted skill mentions."""
+
+    spans: list[tuple[int, int, str]] = []
+    for skill, status in status_by_skill.items():
+        for pattern in SKILLS[skill].patterns:
+            spans.extend((m.start(), m.end(), skill) for m in re.finditer(pattern, job_description, re.IGNORECASE))
+    spans.sort(key=lambda span: (span[0], -(span[1] - span[0])))
+
+    segments: list[TextSegment] = []
+    cursor = 0
+    for start, end, skill in spans:
+        if start < cursor or start == end:
+            continue  # Overlaps an earlier, longer match.
+        if start > cursor:
+            segments.append(TextSegment(job_description[cursor:start]))
+        segments.append(TextSegment(job_description[start:end], skill, status_by_skill[skill]))
+        cursor = end
+    if cursor < len(job_description):
+        segments.append(TextSegment(job_description[cursor:]))
+    return segments
+
+
 def _build_suggestions(
     gaps: list[GapDetail], evidence: list[SkillEvidence], resume_text: str
 ) -> list[str]:
@@ -296,8 +330,10 @@ def build_match_report(resume_text: str, job_description: str) -> MatchReport:
     bonus_skills = find_skills(bonus_text) - required_skills
 
     # "PyTorch or TensorFlow": if the resume shows one alternative, the others are not gaps.
+    covered_alternatives: set[str] = set()
     for group in _alternative_groups(job_description):
         if group & resume_skills:
+            covered_alternatives |= group - resume_skills
             required_skills -= group - resume_skills
             bonus_skills -= group - resume_skills
     job_skills = required_skills | bonus_skills
@@ -335,6 +371,11 @@ def build_match_report(resume_text: str, job_description: str) -> MatchReport:
         counts[0] += skill in resume_skills
     coverage = [CategoryCoverage(name, matched, total) for name, (matched, total) in sorted(categories.items())]
 
+    status_by_skill = {skill: "matched" for skill in matching_skills}
+    status_by_skill.update({skill: "missing_required" for skill in missing_required})
+    status_by_skill.update({skill: "missing_bonus" for skill in missing_bonus})
+    status_by_skill.update({skill: "covered" for skill in covered_alternatives})
+
     return MatchReport(
         match_score=max(0, min(score, 100)),
         matching_skills=matching_skills,
@@ -348,6 +389,8 @@ def build_match_report(resume_text: str, job_description: str) -> MatchReport:
         skill_evidence=evidence,
         gaps=gaps,
         category_coverage=coverage,
+        term_coverage=round(term_coverage, 4),
+        job_segments=_segment_job_description(job_description, status_by_skill),
     )
 
 
@@ -377,7 +420,7 @@ def build_application_plan(report: MatchReport, target_role: str) -> Application
             headline=f"Apply after a focused update for {role}.",
             reason=f"Your profile has relevant evidence, but {gap} needs a clearer proof point or a learning plan.",
             next_actions=[
-                f"This week: close the {gap} gap with the project idea in the Skills tab.",
+                f"This week: close the {gap} gap with the project in your Learning plan.",
                 "Rewrite your top 3 bullets to lead with measurable results.",
                 "Save this opportunity and apply once the update is truthful and complete.",
             ],
@@ -390,7 +433,7 @@ def build_application_plan(report: MatchReport, target_role: str) -> Application
         reason=f"The current CV does not yet show enough overlap with the role. Start with {gap}.",
         next_actions=[
             f"Start with {gap}: build one small, public project that proves it.",
-            "Pick 2-3 required skills from the Skills tab and plan a 4-week learning sprint.",
+            "Follow the week-by-week Learning plan for the top 2-3 required skills.",
             "Return and re-run this analysis once the project is on your resume.",
         ],
     )

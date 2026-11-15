@@ -63,11 +63,15 @@ Grounding rules (these matter more than anything else):
   word-for-word from the resume into resume_evidence. Do not paraphrase it.
 - List a gap only when the job description asks for something the resume does not show. Copy a short
   phrase word-for-word from the job description into job_requirement. In how_to_close, suggest one
-  specific, small project or action the candidate can finish in 1-2 weeks with free tools.
+  specific, small project or action the candidate can finish in 1-2 weeks with free tools. Only name
+  options that are actually free for students (e.g. Kaggle, Google Colab, Hugging Face, the AWS/Azure/GCP
+  free tiers, Groq or Gemini free API tiers, GitHub). Do not describe paid APIs such as OpenAI's as free.
 - bullet_rewrites: pick the resume bullets most relevant to this job. Copy each one word-for-word into
   original. In improved, rewrite it to lead with impact and use the job's wording, using ONLY facts
   already in the original. Never add a tool, skill, metric, or achievement that is not in the original.
   If a number would help, write a placeholder such as [X%] or [N users] for the candidate to fill in.
+  Keep rewrites to one concise line. Do not tack on filler such as "demonstrating strong X skills" or
+  "showcasing expertise in Y"; recruiters skip those phrases.
 - resume_suggestions: specific, prioritized edits (not generic advice). Never suggest claiming a skill
   the resume does not show; phrase those conditionally ("If you used X in project Y, say so").
 - interview_questions: questions this interviewer would likely ask THIS candidate, tied to their

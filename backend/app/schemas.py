@@ -36,6 +36,12 @@ class CategoryCoverageResponse(BaseModel):
     total: int
 
 
+class TextSegmentResponse(BaseModel):
+    text: str
+    skill: str | None = None
+    status: Literal["matched", "missing_required", "missing_bonus", "covered"] | None = None
+
+
 class ATSCheckResponse(BaseModel):
     id: str
     label: str
@@ -119,6 +125,8 @@ class AnalysisResponse(BaseModel):
     skill_evidence: list[SkillEvidenceResponse] = Field(default_factory=list)
     gaps: list[GapResponse] = Field(default_factory=list)
     category_coverage: list[CategoryCoverageResponse] = Field(default_factory=list)
+    term_coverage: float = Field(default=0.0, ge=0, le=1, description="Share of job-description terms found in the resume (used by the what-if simulator).")
+    job_segments: list[TextSegmentResponse] = Field(default_factory=list)
     resume_suggestions: list[str] = Field(default_factory=list)
     ats: ATSReportResponse | None = None
     target_role: str

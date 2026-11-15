@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Read backend/.env (if present) before anything looks at environment variables.
 load_dotenv()
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas import (
@@ -17,16 +17,18 @@ from app.schemas import (
     CategoryCoverageResponse,
     GapResponse,
     SkillEvidenceResponse,
+    TextSegmentResponse,
 )
 from app.services.ats_checker import run_ats_checks
 from app.services.llm_analyzer import analyze_with_llm, resolve_providers
-from app.services.pdf_extractor import extract_resume_from_pdf
+from app.services.pdf_extractor import MAX_RESUME_BYTES, extract_resume_from_pdf
+from app.services.rate_limit import enforce_analysis_limit
 from app.services.skill_matcher import build_application_plan, build_match_report
 
 app = FastAPI(
     title="CareerLens AI API",
     description="Evidence-grounded career analysis API.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 # The React app runs on a different address from this API, so CORS must allow it.
@@ -67,7 +69,7 @@ def health_check() -> dict[str, str | bool | None]:
     return {"status": "ok", "ai_enabled": bool(providers), "ai_provider": " + ".join(providers) or None}
 
 
-@app.post("/api/analyze", response_model=AnalysisResponse)
+@app.post("/api/analyze", response_model=AnalysisResponse, dependencies=[Depends(enforce_analysis_limit)])
 async def analyze_career_fit(
     resume: Annotated[UploadFile, File(description="A resume PDF, 5 MB maximum")],
     job_description: Annotated[str, Form(min_length=30, max_length=20_000)],
@@ -86,7 +88,8 @@ async def analyze_career_fit(
             detail="Please upload a PDF resume.",
         )
 
-    resume_bytes = await resume.read()
+    # Read at most one byte over the limit so an oversized upload is rejected without loading it all.
+    resume_bytes = await resume.read(MAX_RESUME_BYTES + 1)
     extracted_resume = extract_resume_from_pdf(resume_bytes)
     report = build_match_report(extracted_resume.text, job_description)
     plan = build_application_plan(report, target_role)
@@ -128,6 +131,8 @@ async def analyze_career_fit(
         skill_evidence=[SkillEvidenceResponse(**vars(item)) for item in report.skill_evidence],
         gaps=[GapResponse(**vars(item)) for item in report.gaps],
         category_coverage=[CategoryCoverageResponse(**vars(item)) for item in report.category_coverage],
+        term_coverage=report.term_coverage,
+        job_segments=[TextSegmentResponse(**vars(item)) for item in report.job_segments],
         resume_suggestions=report.suggestions,
         ats=ATSReportResponse(
             score=ats.score,
