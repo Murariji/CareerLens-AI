@@ -2,22 +2,26 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { AnalysisResult, ServerStatus, UsageStats, analyzeCareerFit, fetchStats, wakeServer } from './api/client'
 import { Icon, IconName } from './components/Icon'
 import { DASHBOARD_SECTIONS, ResultsDashboard } from './components/ResultsDashboard'
+import {
+  SavedReport,
+  TrackedOpportunity,
+  addToHistory,
+  clearHistory,
+  formatWhen,
+  getReport,
+  loadHistory,
+  loadTracker,
+  saveTracker,
+} from './lib/history'
 import sampleReport from './sampleReport.json'
 
 const SAMPLE = sampleReport as AnalysisResult
+const SAMPLE_ID = 'sample'
 
-type TrackedOpportunity = {
-  id: string
-  role: string
-  location: string
-  score: number
-  readiness: AnalysisResult['application_plan']['readiness']
-  status: 'saved' | 'applied'
-}
 type ThemeChoice = 'light' | 'dark' | 'system'
 
-const TRACKER_STORAGE_KEY = 'careerlens-tracked-opportunities'
 const THEME_STORAGE_KEY = 'careerlens-theme'
+const SIDEBAR_STORAGE_KEY = 'careerlens-sidebar-collapsed'
 const PROGRESS_STEPS = ['Reading your PDF', 'Matching skills to the job', 'Running ATS checks', 'Writing your action plan']
 
 function readStorage(key: string): string | null {
@@ -33,15 +37,6 @@ function writeStorage(key: string, value: string) {
     window.localStorage.setItem(key, value)
   } catch {
     // Storage can be unavailable (private mode, quota); the app still works for this visit.
-  }
-}
-
-function loadTrackedOpportunities(): TrackedOpportunity[] {
-  try {
-    const stored = readStorage(TRACKER_STORAGE_KEY)
-    return stored ? JSON.parse(stored) as TrackedOpportunity[] : []
-  } catch {
-    return []
   }
 }
 
@@ -109,19 +104,21 @@ function App() {
   const [targetRole, setTargetRole] = useState('')
   const [location, setLocation] = useState('India')
   const [error, setError] = useState('')
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(() =>
-    new URLSearchParams(window.location.search).has('sample') ? SAMPLE : null,
-  )
+  const startsWithSample = new URLSearchParams(window.location.search).has('sample')
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(startsWithSample ? SAMPLE : null)
+  const [reportId, setReportId] = useState<string | null>(startsWithSample ? SAMPLE_ID : null)
+  const [history, setHistory] = useState<SavedReport[]>(loadHistory)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [server, setServer] = useState<ServerStatus>({ state: 'waking' })
   const [usage, setUsage] = useState<UsageStats | null>(null)
-  const [trackedOpportunities, setTrackedOpportunities] = useState<TrackedOpportunity[]>(loadTrackedOpportunities)
+  const [trackedOpportunities, setTrackedOpportunities] = useState<TrackedOpportunity[]>(loadTracker)
   const [feedback, setFeedback] = useState('')
   const [activeSection, setActiveSection] = useState('analyse')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => readStorage(SIDEBAR_STORAGE_KEY) === '1')
   const resultsRef = useRef<HTMLDivElement>(null)
-  const isSample = analysis === SAMPLE
+  const isSample = reportId === SAMPLE_ID
 
   const navItems: { id: string; label: string; icon: IconName }[] = [
     { id: 'analyse', label: 'Analyse', icon: 'upload' },
@@ -143,6 +140,10 @@ function App() {
   }, [])
 
   useEffect(() => {
+    writeStorage(SIDEBAR_STORAGE_KEY, collapsed ? '1' : '0')
+  }, [collapsed])
+
+  useEffect(() => {
     if (!feedback) return
     const timer = window.setTimeout(() => setFeedback(''), 4000)
     return () => window.clearTimeout(timer)
@@ -154,10 +155,6 @@ function App() {
     const timer = window.setInterval(() => setElapsed((seconds) => seconds + 1), 1000)
     return () => window.clearInterval(timer)
   }, [isAnalyzing])
-
-  useEffect(() => {
-    if (analysis && !isSample) resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [analysis, isSample])
 
   // Highlight the sidebar item for the section currently on screen.
   useEffect(() => {
@@ -179,33 +176,57 @@ function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  function showReport(next: AnalysisResult, id: string) {
+    setError('')
+    setAnalysis(next)
+    setReportId(id)
+    setMenuOpen(false)
+    window.setTimeout(() => goTo('overview'), 60)
+  }
+
+  function openSaved(id: string | undefined) {
+    if (id === SAMPLE_ID) return showReport(SAMPLE, SAMPLE_ID)
+    const saved = id ? getReport(id) : null
+    if (saved) showReport(saved.analysis, saved.id)
+    else setFeedback('That report was saved before history existed. Analyse the resume again to keep a copy.')
+  }
+
   function persistTracker(nextItems: TrackedOpportunity[]) {
     setTrackedOpportunities(nextItems)
-    writeStorage(TRACKER_STORAGE_KEY, JSON.stringify(nextItems))
+    saveTracker(nextItems)
+  }
+
+  function trackedFor(current: AnalysisResult | null) {
+    if (!current) return undefined
+    return trackedOpportunities.find((item) => (reportId && item.reportId === reportId)
+      || (!item.reportId && item.role === current.target_role && item.location === (current.location ?? '')))
   }
 
   function saveToTracker(status: TrackedOpportunity['status']) {
     if (!analysis) return
-
-    const alreadyTracked = trackedOpportunities.find((item) => item.role === analysis.target_role && item.location === (analysis.location ?? ''))
+    const existing = trackedFor(analysis)
     const item: TrackedOpportunity = {
-      id: alreadyTracked?.id ?? `${analysis.target_role}-${Date.now()}`,
+      id: existing?.id ?? `t${Date.now().toString(36)}`,
       role: analysis.target_role,
       location: analysis.location ?? '',
       score: analysis.match_score,
       readiness: analysis.application_plan.readiness,
       status,
+      reportId: reportId ?? existing?.reportId,
+      updatedAt: new Date().toISOString(),
     }
-    persistTracker(
-      alreadyTracked
-        ? trackedOpportunities.map((entry) => (entry.id === item.id ? item : entry))
-        : [...trackedOpportunities, item],
-    )
+    persistTracker(existing ? trackedOpportunities.map((entry) => (entry.id === item.id ? item : entry)) : [item, ...trackedOpportunities])
     setFeedback(status === 'applied' ? `Marked "${item.role}" as applied. Good luck!` : `Saved "${item.role}" to your tracker.`)
   }
 
   function removeFromTracker(id: string) {
     persistTracker(trackedOpportunities.filter((item) => item.id !== id))
+  }
+
+  function handleClearHistory() {
+    clearHistory()
+    setHistory([])
+    setFeedback('Recent analyses cleared from this browser.')
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -222,7 +243,9 @@ function App() {
     setIsAnalyzing(true)
     try {
       const result = await analyzeCareerFit(resumeFile, jobDescription, targetRole, location)
-      setAnalysis(result)
+      const id = addToHistory(result)
+      setHistory(loadHistory())
+      showReport(result, id)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Something went wrong.')
     } finally {
@@ -233,31 +256,71 @@ function App() {
   const stepIndex = Math.min(PROGRESS_STEPS.length - 1, Math.floor(elapsed / 2))
 
   return (
-    <div className="shell">
-      <aside className={`sidebar ${menuOpen ? 'open' : ''}`} aria-label="Sections">
-        <a className="brand" href="#analyse" onClick={(event) => { event.preventDefault(); goTo('analyse') }}>
+    <div className={`shell ${collapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${menuOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label="Sections">
+        <button
+          type="button"
+          className="brand"
+          onClick={() => (menuOpen ? setMenuOpen(false) : setCollapsed((value) => !value))}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
           <span className="brand-mark">C</span>
-          <span>CareerLens <em>AI</em></span>
-        </a>
+          <span className="brand-text">CareerLens <em>AI</em></span>
+          <span className="collapse-hint" aria-hidden="true">‹</span>
+        </button>
+
         <nav className="side-nav">
           {navItems.map((item, index) => (
             <a
               key={item.id}
               href={`#${item.id}`}
+              title={collapsed ? item.label : undefined}
               className={`${activeSection === item.id ? 'active' : ''} ${index === 1 && analysis ? 'group-start' : ''}`}
               onClick={(event) => { event.preventDefault(); goTo(item.id) }}
             >
               <Icon name={item.icon} size={17} />
-              <span>{item.label}</span>
+              <span className="nav-label">{item.label}</span>
             </a>
           ))}
         </nav>
-        {!analysis && (
+
+        {history.length > 0 && (
+          <div className="side-history">
+            <div className="side-history-head">
+              <span>Recent analyses</span>
+              <button type="button" className="link-btn" onClick={handleClearHistory}>Clear</button>
+            </div>
+            <ul>
+              {history.map((saved) => (
+                <li key={saved.id}>
+                  <button
+                    type="button"
+                    className={reportId === saved.id ? 'active' : ''}
+                    onClick={() => openSaved(saved.id)}
+                    title={`${saved.analysis.target_role} · ${saved.analysis.match_score}%`}
+                  >
+                    <span className="history-score">{saved.analysis.match_score}</span>
+                    <span className="history-text">
+                      <b>{saved.analysis.target_role}</b>
+                      <small>{formatWhen(saved.savedAt)}</small>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {!analysis && history.length === 0 && (
           <p className="side-hint">Run an analysis (or open the sample report) to unlock the score, skills map, simulator and more.</p>
         )}
         <div className="side-foot">
-          <a href="https://github.com/Murariji/CareerLens-AI" target="_blank" rel="noreferrer"><Icon name="github" size={16} />Source on GitHub</a>
-          <span>MIT licensed · resumes never stored</span>
+          <a href="https://github.com/Murariji/CareerLens-AI" target="_blank" rel="noreferrer" title="Source on GitHub">
+            <Icon name="github" size={16} /><span className="nav-label">Source on GitHub</span>
+          </a>
+          <span className="nav-label">MIT licensed · resumes never stored on our servers</span>
         </div>
       </aside>
       {menuOpen && <button type="button" className="scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />}
@@ -280,7 +343,7 @@ function App() {
               the gaps that matter, an ATS checklist, a learning plan and interview questions in under a minute.
             </p>
             <div className="hero-actions">
-              <button type="button" className="btn ghost" onClick={() => { setError(''); setAnalysis(SAMPLE); window.setTimeout(() => goTo('overview'), 50) }}>
+              <button type="button" className="btn ghost" onClick={() => showReport(SAMPLE, SAMPLE_ID)}>
                 <Icon name="sparkles" size={16} />View a sample report
               </button>
             </div>
@@ -340,7 +403,7 @@ function App() {
                 </ol>
               ) : (
                 <p className="muted small">
-                  Never stored. In AI mode the text is sent to Groq (or Gemini as backup) for analysis. <a href="https://github.com/Murariji/CareerLens-AI/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Privacy details</a>
+                  Never stored on our servers. In AI mode the text is sent to Groq (or Gemini as backup) for analysis. <a href="https://github.com/Murariji/CareerLens-AI/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Privacy details</a>
                 </p>
               )}
               <button type="submit" className="btn primary big" disabled={isAnalyzing}>
@@ -359,9 +422,10 @@ function App() {
           )}
           {analysis && (
             <ResultsDashboard
+              key={reportId ?? 'current'}
               analysis={analysis}
               onTrack={saveToTracker}
-              trackedStatus={trackedOpportunities.find((item) => item.role === analysis.target_role && item.location === (analysis.location ?? ''))?.status ?? null}
+              trackedStatus={trackedFor(analysis)?.status ?? null}
             />
           )}
         </div>
@@ -371,22 +435,32 @@ function App() {
             <span className="section-icon"><Icon name="bookmark" size={18} /></span>
             <div>
               <h3>Application tracker</h3>
-              <p className="muted small">Roles you've saved or applied to. Stored only in this browser.</p>
+              <p className="muted small">Roles you've saved or applied to. Click one to reopen its full report. Stored only in this browser.</p>
             </div>
           </header>
           {trackedOpportunities.length === 0 ? (
             <p className="muted">Save an analysed role to start tracking it.</p>
           ) : (
             <ul className="tracker-list">
-              {trackedOpportunities.map((item) => (
-                <li key={item.id}>
-                  <div><b>{item.role}</b><span>{item.location || 'Location not set'} · {item.score}% match</span></div>
-                  <div className="tracker-right">
-                    <em className={item.status}>{item.status === 'applied' ? 'Applied' : 'Saved'}</em>
-                    <button type="button" className="link-btn" onClick={() => removeFromTracker(item.id)}>Remove</button>
-                  </div>
-                </li>
-              ))}
+              {trackedOpportunities.map((item) => {
+                const openable = item.reportId === SAMPLE_ID || Boolean(item.reportId && getReport(item.reportId))
+                return (
+                  <li key={item.id} className={openable ? 'openable' : ''}>
+                    <button type="button" className="tracker-open" onClick={() => openSaved(item.reportId)} title={openable ? 'Open this report' : 'Report not saved'}>
+                      <b>{item.role}</b>
+                      <span>
+                        {item.location || 'Location not set'} · {item.score}% match
+                        {item.updatedAt ? ` · ${formatWhen(item.updatedAt)}` : ''}
+                        {openable ? ' · Open report →' : ''}
+                      </span>
+                    </button>
+                    <div className="tracker-right">
+                      <em className={item.status}>{item.status === 'applied' ? 'Applied' : 'Saved'}</em>
+                      <button type="button" className="link-btn" onClick={() => removeFromTracker(item.id)}>Remove</button>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>
