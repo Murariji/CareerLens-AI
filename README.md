@@ -30,9 +30,25 @@ The frontend collects and displays information. The backend keeps the AI key sec
 
 ## How the current match score works
 
-CareerLens currently uses a transparent baseline before we introduce an LLM. It detects a curated set of skills in both the uploaded resume and the job description, then combines skill coverage with relevant-term coverage. The result is an **evidence match**, not a promise of interview success or an ATS score.
+The match score comes from a transparent baseline. It detects a curated set of skills in both the uploaded resume and the job description, then combines skill coverage with relevant-term coverage. The result is an **evidence match**, not a promise of interview success or an ATS score.
 
-This baseline is important: it is reproducible, testable, and gives us a benchmark for evaluating the future AI analysis.
+This baseline is important: it is reproducible, testable, and gives us a benchmark for evaluating the AI analysis.
+
+## How the AI analysis works
+
+When the backend has an Anthropic API key, it also asks Claude (`claude-opus-5-5` by default) for a structured analysis: a fit summary, strengths, gaps, truthful resume suggestions, and interview questions. The code is in `backend/app/services/llm_analyzer.py`.
+
+- Every strength must quote the resume word-for-word, and every gap must quote the job description. The backend checks each quote against the real text and drops any claim it cannot find.
+- Resume and job text are passed to the model as data, never as instructions.
+- If no key is set or the AI call fails, the API still returns the baseline report with a short notice.
+
+To enable it locally (PowerShell):
+
+```powershell
+$env:ANTHROPIC_API_KEY = "your-key"            # never commit this
+# optional: $env:CAREERLENS_LLM_MODEL = "claude-sonnet-5-5"
+cd backend; .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
 
 ## Technology
 

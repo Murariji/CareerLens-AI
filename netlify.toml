@@ -1,0 +1,8 @@
+# Netlify builds only the React frontend. The FastAPI backend is hosted separately (e.g. Render).
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

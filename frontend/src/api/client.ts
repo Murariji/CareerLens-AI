@@ -1,5 +1,18 @@
+export type AIAnalysis = {
+  model: string
+  fit_summary: string
+  strengths: { skill: string; resume_evidence: string }[]
+  gaps: { skill: string; job_requirement: string; how_to_close: string }[]
+  resume_suggestions: string[]
+  interview_questions: { question: string; why_asked: string }[]
+  removed_unsupported_items: number
+}
+
 export type AnalysisResult = {
   is_demo: boolean
+  analysis_source: 'baseline' | 'ai'
+  ai_analysis: AIAnalysis | null
+  ai_notice: string | null
   summary: string
   message: string
   resume_filename: string
@@ -18,7 +31,9 @@ export type AnalysisResult = {
   }
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+// Set VITE_API_BASE_URL in Netlify (Site configuration > Environment variables) for the live site.
+// It is public by design: never put secret keys in a VITE_ variable.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/+$/, '')
 
 export async function analyzeCareerFit(
   resume: File,

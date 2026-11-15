@@ -17,9 +17,9 @@
 - [x] Add the `/api/analyze` backend endpoint
 - [x] Define structured request and response schemas
 - [x] Add an explainable deterministic skill-match baseline
-- [ ] Validate the skill-match baseline with unit tests
-- [ ] Call the LLM through the backend only
-- [ ] Add grounding and anti-fabrication guardrails
+- [x] Validate the skill-match baseline with unit tests
+- [x] Call the LLM through the backend only
+- [x] Add grounding and anti-fabrication guardrails
 
 ## Milestone 4: Quality and release
 

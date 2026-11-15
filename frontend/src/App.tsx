@@ -220,6 +220,56 @@ function App() {
               <ol>{analysis.resume_suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ol>
             </div>
           )}
+          {analysis.ai_notice && <p className="ai-notice" role="status">{analysis.ai_notice}</p>}
+          {analysis.ai_analysis && (
+            <section className="ai-analysis" aria-label="AI analysis">
+              <p className="result-label">AI analysis, grounded in your documents</p>
+              <p className="ai-summary">{analysis.ai_analysis.fit_summary}</p>
+              <div className="insight-grid">
+                <article className="insight-card positive">
+                  <p>Strengths with proof</p>
+                  {analysis.ai_analysis.strengths.length > 0 ? (
+                    <ul className="evidence-list">
+                      {analysis.ai_analysis.strengths.map((item) => (
+                        <li key={item.skill}><b>{item.skill}</b><q>{item.resume_evidence}</q></li>
+                      ))}
+                    </ul>
+                  ) : <small>No strengths could be verified against your resume text.</small>}
+                </article>
+                <article className="insight-card gap">
+                  <p>Gaps to work on</p>
+                  {analysis.ai_analysis.gaps.length > 0 ? (
+                    <ul className="evidence-list">
+                      {analysis.ai_analysis.gaps.map((item) => (
+                        <li key={item.skill}><b>{item.skill}</b><q>{item.job_requirement}</q><span>{item.how_to_close}</span></li>
+                      ))}
+                    </ul>
+                  ) : <small>No verified gaps against this job description.</small>}
+                </article>
+              </div>
+              {analysis.ai_analysis.resume_suggestions.length > 0 && (
+                <div className="suggestion-list">
+                  <p>AI resume suggestions</p>
+                  <ol>{analysis.ai_analysis.resume_suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>)}</ol>
+                </div>
+              )}
+              {analysis.ai_analysis.interview_questions.length > 0 && (
+                <div className="suggestion-list">
+                  <p>Interview questions to prepare</p>
+                  <ol>
+                    {analysis.ai_analysis.interview_questions.map((item) => (
+                      <li key={item.question}>{item.question}<small className="why-asked">{item.why_asked}</small></li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {analysis.ai_analysis.removed_unsupported_items > 0 && (
+                <p className="guardrail-note">
+                  {analysis.ai_analysis.removed_unsupported_items} AI claim{analysis.ai_analysis.removed_unsupported_items === 1 ? ' was' : 's were'} removed because the evidence could not be found in your documents.
+                </p>
+              )}
+            </section>
+          )}
           <section className={`readiness-card ${analysis.application_plan.readiness}`}>
             <p className="result-label">Your next best action</p>
             <h3>{analysis.application_plan.headline}</h3>
